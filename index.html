@@ -209,7 +209,17 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
 .btn-primary{background:var(--navy);color:#fff}
 .btn-primary:hover{background:var(--navy2);transform:translateY(-1px)}
 .btn-secondary{background:var(--bg);color:var(--text);border:1.5px solid #d1d5db}
-.btn-secondary:hover{background:#e4e8f0}
+.btn-audio[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+.card-listen{
+  display:none;position:absolute;left:5px;bottom:5px;z-index:5;
+  width:22px;height:22px;border:none;border-radius:50%;
+  background:rgba(26,53,102,.9);color:#fff;cursor:pointer;padding:0;
+  box-shadow:0 1px 4px rgba(0,0,0,.25)
+}
+.card-listen svg{width:12px;height:12px;display:block;margin:auto}
+body.audio-desc .card-listen{display:grid;place-items:center}
+body.audio-desc .card{cursor:pointer}
+.print-copy .card-listen{display:none!important}
 .hint-count{background:#fff;border:1.5px solid #c5d0e0;color:var(--navy);padding:10px 16px;border-radius:8px;
   font-size:.82rem;font-weight:600;margin-left:auto;white-space:nowrap}
 .score{background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;
@@ -345,6 +355,7 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
     <button class="btn btn-secondary" id="hint">Indice</button>
     <button class="btn btn-secondary" id="reset">Recommencer</button>
     <button class="btn btn-secondary" id="printTl" type="button">Imprimer mes réponses</button>
+    <button class="btn btn-secondary btn-audio" id="audioDesc" type="button" aria-pressed="false" title="Activer la description audio des cartes">Description audio</button>
     <button class="btn btn-primary" id="openActivity" type="button">Théorie cellulaire, activité</button>
     <div class="hint-count" id="hintCount">Indices : 0 (frise 0 · principes 0)</div>
     <div class="score" id="score">0 / 0</div>
@@ -433,14 +444,26 @@ function shortLabel(label){
   const part=String(label).split("—")[0].split(" - ")[0].trim();
   return part.length>28?part.slice(0,26)+"…":part;
 }
+function speakCard(e){
+  if(!e||!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const text="Carte. "+String(e.label).replace(/\s*[—–-]\s*/g,". ");
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="fr-FR";
+  u.rate=0.92;
+  const fr=speechSynthesis.getVoices().find(v=>String(v.lang).toLowerCase().startsWith("fr"));
+  if(fr) u.voice=fr;
+  speechSynthesis.speak(u);
+}
+if(window.speechSynthesis) speechSynthesis.addEventListener("voiceschanged",()=>{});
 function makeCard(e){
   const el=document.createElement("div");
   el.className="card";
   el.draggable=true;
   el.dataset.id=e.id;
-  el.innerHTML=`<div class="card-top">Carte</div><img src="${e.img}" alt="${e.label}"><div class="card-body"><div class="card-name">${shortLabel(e.label)}</div></div>`;
+  el.innerHTML=`<div class="card-top">Carte</div><img src="${e.img}" alt="${e.label}"><div class="card-body"><div class="card-name">${shortLabel(e.label)}</div></div><button class="card-listen" type="button" aria-label="Écouter la description de la carte" title="Écouter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18 6a8 8 0 0 1 0 12"/></svg></button>`;
   el.addEventListener("dragstart",ev=>{
-    if(ev.target.closest && ev.target.closest(".card-mark")) return;
+    if(ev.target.closest && ev.target.closest(".card-mark, .card-listen")) return;
     dragMark=null;dragMarkFrom=null;
     dragId=e.id;el.classList.add("dragging");ev.dataTransfer.setData("text/plain",e.id);
   });
@@ -457,9 +480,12 @@ function makeCard(e){
     placeMark(el,n,dragMarkFrom);
   });
   el.addEventListener("click",ev=>{
-    if(ev.target.closest && ev.target.closest(".card-mark")) return;
-    if(!el.classList.contains("markable")||!["1","2","3"].includes(String(dragMark||""))) return;
-    placeMark(el,dragMark,null);
+    if(ev.target.closest && ev.target.closest(".card-mark, .card-listen")) return;
+    if(el.classList.contains("markable")&&["1","2","3"].includes(String(dragMark||""))){
+      placeMark(el,dragMark,null);
+      return;
+    }
+    if(document.body.classList.contains("audio-desc")) speakCard(e);
   });
   return el;
 }
@@ -651,9 +677,17 @@ function refreshActivityBoard(){
       const n=String(ev.dataTransfer.getData("text/plain")||dragMark||"");
       placeMark(card,n,originalCard(dragMarkFrom));
     });
-    clone.addEventListener("click",()=>{
-      if(!clone.classList.contains("markable")||!["1","2","3"].includes(String(dragMark||""))) return;
-      placeMark(card,dragMark,null);
+    clone.addEventListener("click",ev=>{
+      if(ev.target.closest && ev.target.closest(".card-listen")){
+        ev.preventDefault();ev.stopPropagation();
+        speakCard(events.find(x=>x.id===card.dataset.id));
+        return;
+      }
+      if(clone.classList.contains("markable")&&["1","2","3"].includes(String(dragMark||""))){
+        placeMark(card,dragMark,null);
+        return;
+      }
+      if(document.body.classList.contains("audio-desc")) speakCard(events.find(x=>x.id===card.dataset.id));
     });
     box.appendChild(clone);
   });
@@ -817,6 +851,19 @@ document.getElementById("activity-modal").addEventListener("click",e=>{
   if(e.target.id==="activity-modal") closeActivity();
 });
 document.getElementById("hint").onclick=hint;
+document.getElementById("audioDesc").onclick=()=>{
+  const on=document.body.classList.toggle("audio-desc");
+  document.getElementById("audioDesc").setAttribute("aria-pressed",on?"true":"false");
+  if(!on&&window.speechSynthesis) speechSynthesis.cancel();
+};
+document.addEventListener("click",e=>{
+  const btn=e.target.closest && e.target.closest(".card-listen");
+  if(!btn) return;
+  e.preventDefault();e.stopPropagation();
+  const card=btn.closest(".card");
+  if(!card) return;
+  speakCard(events.find(x=>x.id===card.dataset.id));
+},true);
 document.getElementById("shuffle").onclick=restartFresh;
 document.getElementById("reset").onclick=restartFresh;
 document.getElementById("printTl").onclick=printTimeline;
