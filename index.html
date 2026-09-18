@@ -61,6 +61,20 @@ main{padding:12px 18px 8px;width:100%;max-width:none;flex:1;display:flex;flex-di
     transform:scale(2.9);z-index:80;
     box-shadow:0 18px 44px rgba(26,53,102,.32)
   }
+  .activity-clone.mark-ok:hover,.activity-cards .card.mark-ok:hover{
+    box-shadow:
+      0 0 0 3px #fff,
+      0 0 0 8px #22c55e,
+      0 0 24px 8px rgba(34,197,94,.6),
+      0 18px 44px rgba(16,185,129,.35)!important
+  }
+  .activity-clone.mark-bad:hover,.activity-cards .card.mark-bad:hover{
+    box-shadow:
+      0 0 0 3px #fff,
+      0 0 0 8px #ef4444,
+      0 0 24px 8px rgba(239,68,68,.6),
+      0 18px 44px rgba(220,38,38,.35)!important
+  }
 }
 .card.dragging,.card.dragging:hover{opacity:.4;transform:scale(.95);z-index:auto}
 .card-top{color:#fff;font-size:.58rem;font-weight:600;letter-spacing:.4px;
@@ -77,14 +91,36 @@ body.activity-on .card.markable,
 body.activity-on .card.markable.mark-ok,
 .activity-clone.markable.mark-ok,
 .card.mark-ok{
-  outline:3px solid var(--green)!important;outline-offset:2px;
-  box-shadow:0 0 0 4px rgba(29,138,74,.28)!important;border-color:var(--green)
+  outline:none!important;
+  border-color:#0f9d58!important;
+  background:#edfbf3;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 7px #22c55e,
+    0 0 18px 6px rgba(34,197,94,.55),
+    0 0 42px 12px rgba(16,185,129,.35)!important;
+  animation:haloOk 1.35s ease-in-out 2
 }
 body.activity-on .card.markable.mark-bad,
 .activity-clone.markable.mark-bad,
 .card.mark-bad{
-  outline:3px solid var(--red2)!important;outline-offset:2px;
-  box-shadow:0 0 0 4px rgba(212,68,68,.28)!important;border-color:var(--red2)
+  outline:none!important;
+  border-color:#dc2626!important;
+  background:#fff1f1;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 7px #ef4444,
+    0 0 18px 6px rgba(239,68,68,.55),
+    0 0 42px 12px rgba(220,38,38,.38)!important;
+  animation:haloBad 1.35s ease-in-out 2
+}
+@keyframes haloOk{
+  0%,100%{box-shadow:0 0 0 3px #fff,0 0 0 7px #22c55e,0 0 18px 6px rgba(34,197,94,.5),0 0 36px 10px rgba(16,185,129,.28)}
+  50%{box-shadow:0 0 0 4px #fff,0 0 0 10px #16a34a,0 0 28px 10px rgba(34,197,94,.75),0 0 56px 18px rgba(16,185,129,.45)}
+}
+@keyframes haloBad{
+  0%,100%{box-shadow:0 0 0 3px #fff,0 0 0 7px #ef4444,0 0 18px 6px rgba(239,68,68,.5),0 0 36px 10px rgba(220,38,38,.3)}
+  50%{box-shadow:0 0 0 4px #fff,0 0 0 10px #dc2626,0 0 28px 10px rgba(239,68,68,.78),0 0 56px 18px rgba(220,38,38,.48)}
 }
 .mark-chip{
   width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
@@ -109,7 +145,7 @@ body.activity-on .card.markable.mark-bad,
 .activity-modal.activity-modal{align-items:flex-start;padding:28px 20px 40px;overflow:auto}
 .activity-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
 .activity-head h2{font-family:'Playfair Display',serif;color:var(--navy);font-size:1.3rem}
-.activity-cards{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;min-height:80px;overflow:visible;padding:28px 16px 36px}
+.activity-cards{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;min-height:80px;overflow:visible;padding:32px 18px 40px}
 .activity-clone{width:108px;cursor:copy;z-index:1}
 .activity-clone img{height:96px}
 .principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0 12px}
@@ -172,8 +208,10 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
 .btn-primary:hover{background:var(--navy2);transform:translateY(-1px)}
 .btn-secondary{background:var(--bg);color:var(--text);border:1.5px solid #d1d5db}
 .btn-secondary:hover{background:#e4e8f0}
+.hint-count{background:#fff;border:1.5px solid #c5d0e0;color:var(--navy);padding:10px 16px;border-radius:8px;
+  font-size:.82rem;font-weight:600;margin-left:auto;white-space:nowrap}
 .score{background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;
-  font-size:.88rem;font-weight:600;margin-left:auto}
+  font-size:.88rem;font-weight:600;margin-left:0}
 
 .message{margin-top:14px;padding:12px 16px;border-radius:10px;background:#fff;
   border:1px solid #dbe5f1;color:#334155;display:none;box-shadow:0 1px 4px rgba(0,0,0,.07)}
@@ -199,12 +237,25 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
   @page{size:A4 landscape;margin:8mm}
   html,body{background:#fff!important;height:auto}
   body.printing>*:not(.print-sheet){display:none!important}
-  .print-sheet{display:flex!important;flex-direction:column;justify-content:space-between;gap:8mm;height:100%;min-height:180mm}
-  .print-copy{flex:1 1 0;border:1px dashed #9aa8bc;border-radius:8px;padding:6mm 7mm 5mm;overflow:hidden;page-break-inside:avoid}
-  .print-copy h2{font-family:'Playfair Display',serif;font-size:13pt;color:#1a3566;margin:0 0 4mm;font-weight:700}
+  .print-sheet{display:flex!important;flex-direction:column;justify-content:space-between;gap:6mm;height:100%;min-height:180mm}
+  .print-title{font-family:'Playfair Display',serif;font-size:16pt;color:#1a3566;text-align:center;
+    margin:0 0 3mm;font-weight:700;flex:0 0 auto;letter-spacing:.2px}
+  .print-copy{flex:1 1 0;border:1px dashed #9aa8bc;border-radius:8px;padding:5mm 7mm 4mm;overflow:hidden;page-break-inside:avoid}
   .print-copy .tl-inner{width:100%}
-  .print-copy .drop-zone{min-height:28mm;border:1.5px dashed #c5cedb;background:#fafbfd}
+  .print-copy .drop-zone{min-height:28mm;border:1.5px dashed #c5cedb;background:#fafbfd;overflow:visible}
   .print-copy .card{display:none!important}
+  .print-copy .card.print-mark-ok{
+    display:flex!important;flex-direction:column;width:min(100%,78px);max-height:30mm;
+    animation:none!important;box-shadow:none!important;outline:none!important;
+    background:#fff!important;border:1.6px solid #1d8a4a!important;overflow:visible
+  }
+  .print-copy .card.print-mark-ok img{max-height:16mm;height:16mm;object-fit:contain;flex:0 0 auto}
+  .print-copy .card.print-mark-ok .card-top{min-height:12px;font-size:6.5pt;padding:2px}
+  .print-copy .card.print-mark-ok .card-name{font-size:6.5pt;line-height:1.2}
+  .print-copy .card-mark{
+    position:absolute;top:-3mm;right:-2mm;width:7mm;height:7mm;font-size:9pt;
+    cursor:default;print-color-adjust:exact;-webkit-print-color-adjust:exact
+  }
   .print-copy .tl-date{font-size:9pt}
 }
 </style>
@@ -240,6 +291,7 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
     <div class="controls" style="margin-top:12px">
       <button class="btn btn-primary" id="checkMarks" type="button">Vérifier les principes</button>
       <button class="btn btn-secondary" id="hintMarks" type="button">Indice principe</button>
+      <div class="hint-count" id="hintCountModal" style="margin-left:0">Indices : 0 (frise 0 · principes 0)</div>
     </div>
     <p class="message" id="activity-msg"></p>
   </div>
@@ -290,8 +342,9 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
     <button class="btn btn-secondary" id="shuffle">Mélanger</button>
     <button class="btn btn-secondary" id="hint">Indice</button>
     <button class="btn btn-secondary" id="reset">Recommencer</button>
-    <button class="btn btn-secondary" id="printTl" type="button">Imprimer la frise</button>
+    <button class="btn btn-secondary" id="printTl" type="button">Imprimer mes réponses</button>
     <button class="btn btn-primary" id="openActivity" type="button">Théorie cellulaire, activité</button>
+    <div class="hint-count" id="hintCount">Indices : 0 (frise 0 · principes 0)</div>
     <div class="score" id="score">0 / 0</div>
   </div>
   <p class="message" id="msg"></p>
@@ -318,13 +371,22 @@ const markerBank=document.getElementById("marker-bank");
 const markCount=document.getElementById("mark-count");
 const SAVE_KEY="timeline-theorie-cellulaire-v1";
 let skipSave=false;
+let hintsFrise=0,hintsPrincipes=0;
+
+function updateHintCount(){
+  const text=`Indices : ${hintsFrise+hintsPrincipes}  (frise ${hintsFrise} · principes ${hintsPrincipes})`;
+  ["hintCount","hintCountModal"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=text;
+  });
+}
 
 function readSave(){
   try{return JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(err){return null}
 }
 function hasProgress(s){
   if(!s) return false;
-  return Boolean((s.placed&&s.placed.length)||(s.marks&&Object.keys(s.marks).length));
+  return Boolean((s.placed&&s.placed.length)||(s.marks&&Object.keys(s.marks).length)||(s.hintsFrise||s.hintsPrincipes));
 }
 function saveState(){
   if(skipSave) return;
@@ -344,11 +406,11 @@ function saveState(){
       const f=["correct","wrong","mark-ok","mark-bad"].filter(k=>c.classList.contains(k));
       if(f.length) flags[c.dataset.id]=f;
     });
-    if(!placed.length && !Object.keys(marks).length){
+    if(!placed.length && !Object.keys(marks).length && !hintsFrise && !hintsPrincipes){
       localStorage.removeItem(SAVE_KEY);
       return;
     }
-    localStorage.setItem(SAVE_KEY,JSON.stringify({v:1,deck:deckIds,placed,marks,flags}));
+    localStorage.setItem(SAVE_KEY,JSON.stringify({v:1,deck:deckIds,placed,marks,flags,hintsFrise,hintsPrincipes}));
   }catch(err){}
 }
 function clearSave(){
@@ -439,6 +501,7 @@ function build(){
   msg.classList.remove("show");
   document.getElementById("solution").classList.remove("show");
   startStep2();
+  hintsFrise=0;hintsPrincipes=0;updateHintCount();
   skipSave=false;
   saveState();
 }
@@ -471,6 +534,9 @@ function restore(saved){
     if(card) flags.forEach(c=>card.classList.add(c));
   });
   updateScore();
+  hintsFrise=Number(saved.hintsFrise)||0;
+  hintsPrincipes=Number(saved.hintsPrincipes)||0;
+  updateHintCount();
   skipSave=false;
 }
 function wireDrops(){
@@ -705,6 +771,9 @@ function hint(){
   const e=pool[Math.floor(Math.random()*pool.length)];
   msg.textContent=`Indice : « ${e.label} » se place en ${labelDate(e.date)}.`;
   msg.classList.add("show");
+  hintsFrise++;
+  updateHintCount();
+  saveState();
 }
 function hintMarks(){
   const missing=Object.keys(PRINCIPLES).filter(id=>{
@@ -716,6 +785,9 @@ function hintMarks(){
   const id=missing[Math.floor(Math.random()*missing.length)];
   const ev=events.find(x=>x.id===id);
   showActivityMsg(`Indice : « ${ev.label} » se rattache au principe ${PRINCIPLES[id]}.`);
+  hintsPrincipes++;
+  updateHintCount();
+  saveState();
 }
 function showActivityMsg(text){
   [msg,document.getElementById("activity-msg")].forEach(el=>{
@@ -758,16 +830,24 @@ if(hasProgress(saved)){
 function printTimeline(){
   const sheet=document.getElementById("print-sheet")||document.body.appendChild(Object.assign(document.createElement("div"),{id:"print-sheet",className:"print-sheet"}));
   sheet.innerHTML="";
+  const title=document.createElement("h1");
+  title.className="print-title";
+  title.textContent="Théorie cellulaire et exploration des cellules";
+  sheet.appendChild(title);
   const inner=document.querySelector(".tl-inner");
   if(!inner) return;
   for(let i=0;i<2;i++){
     const copy=document.createElement("section");
     copy.className="print-copy";
-    const h=document.createElement("h2");
-    h.textContent="Frise chronologique — Théorie cellulaire";
-    copy.appendChild(h);
     const clone=inner.cloneNode(true);
-    clone.querySelectorAll(".card").forEach(c=>c.remove());
+    clone.querySelectorAll(".card").forEach(c=>{
+      const expected=PRINCIPLES[c.dataset.id];
+      const badge=c.querySelector(".card-mark");
+      const ok=expected&&badge&&Number(badge.dataset.n)===expected;
+      if(!ok){c.remove();return;}
+      c.classList.add("print-mark-ok");
+      c.classList.remove("markable","unmarkable","mark-ok","mark-bad","correct","wrong","placed","dragging");
+    });
     copy.appendChild(clone);
     sheet.appendChild(copy);
   }
