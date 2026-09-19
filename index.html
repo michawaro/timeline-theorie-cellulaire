@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Timeline — Théorie Cellulaire</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -233,6 +233,43 @@ body.audio-desc .card{cursor:pointer}
 .solution.show{display:block}
 .solution ol{columns:2;line-height:1.75}
 @media(max-width:700px){.solution ol{columns:1}.tl-wrap{overflow-x:auto}}
+.rotate-tip{display:none;position:fixed;inset:0;z-index:100;background:linear-gradient(135deg,#1a3566,#2a4d8e);
+  color:#fff;align-items:center;justify-content:center;text-align:center;padding:28px;font-size:1.15rem;line-height:1.45}
+.phone-nav{display:none;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
+.phone-nav .btn{padding:6px 10px;font-size:.75rem}
+.phone-pos{font-size:.75rem;font-weight:700;color:var(--navy);min-width:3.4em;text-align:center}
+body.phone .phone-nav{display:flex}
+body.phone .tip{display:none}
+body.phone header{padding:6px 10px}
+body.phone header p,body.phone header .badge{display:none}
+body.phone header h1{font-size:1.05rem}
+body.phone header svg{width:28px;height:28px}
+body.phone main{padding:6px 8px;gap:6px}
+body.phone .bank-wrap{margin-bottom:6px;padding:8px 10px}
+body.phone .bank-label{margin-bottom:6px}
+body.phone:not(.phone-all) #deck{justify-content:center;min-height:0;padding:2px}
+body.phone:not(.phone-all) #deck .card{display:none!important}
+body.phone:not(.phone-all) #deck .card.phone-current{display:flex!important;width:136px}
+body.phone:not(.phone-all) #deck .card.phone-current img{height:102px}
+body.phone .card.phone-current,body.phone .card.phone-selected{box-shadow:0 0 0 3px rgba(232,160,32,.45)}
+body.phone.phone-all #deck{max-height:42vh;overflow:auto}
+body.phone.phone-all .tl-wrap{display:none}
+body.phone .tl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;min-height:0}
+body.phone .tl-inner{min-width:760px}
+body.phone .tl-date{font-size:.5rem}
+body.phone .tl-label{margin-bottom:6px}
+body.phone .drop-zone{min-height:64px}
+body.phone .drop-zone .card{width:min(100%,70px)}
+body.phone .drop-zone.phone-target{background:#e8f0fb;border-color:var(--gold)}
+body.phone .tl-date-col{cursor:pointer;padding:4px 0 2px}
+body.phone .controls{gap:6px}
+body.phone .controls .btn{padding:7px 10px;font-size:.72rem}
+body.phone .hint-count,body.phone .score{padding:7px 10px;font-size:.72rem;margin-left:0}
+body.phone .message{margin-top:6px;padding:8px 10px;font-size:.8rem}
+@media(orientation:portrait) and (pointer:coarse){
+  .rotate-tip{display:flex}
+  header,main{visibility:hidden}
+}
 .resume-modal{
   display:none;position:fixed;inset:0;z-index:80;background:rgba(16,28,52,.55);
   align-items:center;justify-content:center;padding:20px
@@ -322,6 +359,7 @@ body.audio-desc .card{cursor:pointer}
   <span class="badge">SVT · 1ère ESc</span>
 </header>
 
+<div class="rotate-tip" id="rotate-tip">Tourne ton téléphone <strong>en paysage</strong> pour voir la frise et placer les cartes.</div>
 <main>
   <div class="tip">
     <strong>Comment jouer :</strong> Fais glisser chaque carte depuis la zone de cartes et dépose-la à sa date sur la frise. Plusieurs cartes peuvent partager la même date. Quand tu es prêt, clique sur <strong>Vérifier</strong>. L’activité sur la théorie cellulaire s’ouvre avec le bouton dédié.
@@ -330,6 +368,12 @@ body.audio-desc .card{cursor:pointer}
   <div class="bank-wrap">
     <div class="bank-label">
       Cartes à placer <span class="bank-count" id="bank-count">0</span>
+      <div class="phone-nav" id="phone-nav">
+        <button class="btn btn-secondary" id="cardPrev" type="button" aria-label="Carte précédente">◀</button>
+        <span class="phone-pos" id="phone-pos">0 / 0</span>
+        <button class="btn btn-secondary" id="cardNext" type="button" aria-label="Carte suivante">▶</button>
+        <button class="btn btn-secondary" id="toggleBank" type="button">Toutes les cartes</button>
+      </div>
     </div>
     <div id="deck"></div>
   </div>
@@ -372,7 +416,7 @@ const PRINCIPLES={
   unite_structurale:2,
   virchow:3,toute_cellule:3,pasteur:3,fin_generation:3
 };
-let dragId=null,dragMark=null,dragMarkFrom=null,step=1;
+let dragId=null,dragMark=null,dragMarkFrom=null,step=1,selectedCardId=null;
 const deck=document.getElementById("deck");
 const slotsEl=document.getElementById("tl-slots");
 const ticksEl=document.getElementById("tl-ticks");
@@ -485,6 +529,10 @@ function makeCard(e){
       placeMark(el,dragMark,null);
       return;
     }
+    if(isPhoneUI()){
+      pickPhoneCard(e.id);
+      return;
+    }
     if(document.body.classList.contains("audio-desc")) speakCard(e);
   });
   return el;
@@ -511,6 +559,7 @@ function drawAxis(){
     ticksEl.appendChild(tickCol);
     const dateCol=document.createElement("div");
     dateCol.className="tl-date-col";
+    dateCol.dataset.date=String(d);
     dateCol.innerHTML=`<div class="tl-date${d<0?" neg":""}">${labelDate(d)}</div>`;
     datesEl.appendChild(dateCol);
   });
@@ -532,6 +581,7 @@ function build(){
   hintsFrise=0;hintsPrincipes=0;updateHintCount();
   skipSave=false;
   saveState();
+  updatePhoneDeck();
 }
 function restore(saved){
   skipSave=true;
@@ -566,6 +616,7 @@ function restore(saved){
   hintsPrincipes=Number(saved.hintsPrincipes)||0;
   updateHintCount();
   skipSave=false;
+  updatePhoneDeck();
 }
 function wireDrops(){
   document.querySelectorAll(".drop-zone").forEach(drop=>{
@@ -582,6 +633,21 @@ function wireDrops(){
       if(["1","2","3"].includes(String(id||""))) return;
       place(id,drop);
     });
+    drop.addEventListener("click",e=>{
+      if(!isPhoneUI()) return;
+      if(e.target.closest && e.target.closest(".card")) return;
+      const id=phonePlaceId();
+      if(!id) return;
+      place(id,drop);
+    });
+  });
+  document.querySelectorAll(".tl-date-col").forEach(col=>{
+    col.addEventListener("click",()=>{
+      if(!isPhoneUI()) return;
+      const drop=document.querySelector(`.drop-zone[data-date="${col.dataset.date}"]`);
+      const id=phonePlaceId();
+      if(drop&&id) place(id,drop);
+    });
   });
 }
 function place(id,drop){
@@ -592,6 +658,8 @@ function place(id,drop){
   card.classList.remove("correct","wrong");
   updateScore();
   saveState();
+  if(selectedCardId===id) selectedCardId=null;
+  updatePhoneDeck();
 }
 deck.addEventListener("dragover",e=>{
   const id=e.dataTransfer.getData("text/plain")||dragId||dragMark;
@@ -610,8 +678,66 @@ deck.addEventListener("drop",e=>{
     card.classList.remove("placed","correct","wrong");
     updateScore();
     saveState();
+    updatePhoneDeck();
   }
 });
+function isPhoneUI(){return document.body.classList.contains("phone")}
+function phonePlaceId(){
+  if(selectedCardId&&document.querySelector(`#deck .card[data-id="${selectedCardId}"]`)) return selectedCardId;
+  const cur=document.querySelector("#deck .card.phone-current");
+  return cur?cur.dataset.id:null;
+}
+function setPhoneTargets(on){
+  document.querySelectorAll(".drop-zone").forEach(z=>z.classList.toggle("phone-target",Boolean(on)&&isPhoneUI()&&!document.body.classList.contains("phone-all")));
+}
+function updateToggleBank(){
+  const btn=document.getElementById("toggleBank");
+  if(btn) btn.textContent=document.body.classList.contains("phone-all")?"Une carte":"Toutes les cartes";
+}
+function pickPhoneCard(id){
+  selectedCardId=id;
+  document.body.classList.remove("phone-all");
+  updateToggleBank();
+  updatePhoneDeck(id);
+}
+function updatePhoneDeck(preferId){
+  const cards=[...deck.querySelectorAll(".card")];
+  const pos=document.getElementById("phone-pos");
+  if(!cards.length){
+    if(pos) pos.textContent="0 / 0";
+    selectedCardId=null;
+    setPhoneTargets(false);
+    return;
+  }
+  const want=preferId||selectedCardId;
+  let i=cards.findIndex(c=>c.dataset.id===want);
+  if(i<0) i=cards.findIndex(c=>c.classList.contains("phone-current"));
+  if(i<0) i=0;
+  cards.forEach((c,j)=>c.classList.toggle("phone-current",j===i));
+  document.querySelectorAll(".card").forEach(c=>c.classList.toggle("phone-selected",c.dataset.id===cards[i].dataset.id));
+  selectedCardId=cards[i].dataset.id;
+  if(pos) pos.textContent=`${i+1} / ${cards.length}`;
+  setPhoneTargets(true);
+}
+function cyclePhone(dir){
+  const cards=[...deck.querySelectorAll(".card")];
+  if(!cards.length) return;
+  let i=cards.findIndex(c=>c.classList.contains("phone-current"));
+  if(i<0) i=0;
+  i=(i+dir+cards.length)%cards.length;
+  pickPhoneCard(cards[i].dataset.id);
+}
+function syncPhone(){
+  const coarse=window.matchMedia("(pointer:coarse)").matches;
+  const phone=coarse||window.innerWidth<760;
+  document.body.classList.toggle("phone",phone);
+  if(phone) updatePhoneDeck();
+  else{
+    document.body.classList.remove("phone-all");
+    setPhoneTargets(false);
+    updateToggleBank();
+  }
+}
 function updateScore(){
   const placed=document.querySelectorAll(".drop-zone .card").length;
   scoreEl.textContent=`${placed} / ${events.length}`;
@@ -850,6 +976,17 @@ document.getElementById("closeActivity").onclick=closeActivity;
 document.getElementById("activity-modal").addEventListener("click",e=>{
   if(e.target.id==="activity-modal") closeActivity();
 });
+document.getElementById("cardPrev").onclick=()=>cyclePhone(-1);
+document.getElementById("cardNext").onclick=()=>cyclePhone(1);
+document.getElementById("toggleBank").onclick=()=>{
+  document.body.classList.toggle("phone-all");
+  if(document.body.classList.contains("phone-all")) setPhoneTargets(false);
+  else updatePhoneDeck();
+  updateToggleBank();
+};
+window.addEventListener("resize",syncPhone);
+window.addEventListener("orientationchange",syncPhone);
+syncPhone();
 document.getElementById("hint").onclick=hint;
 document.getElementById("audioDesc").onclick=()=>{
   const on=document.body.classList.toggle("audio-desc");
