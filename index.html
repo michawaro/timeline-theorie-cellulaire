@@ -238,6 +238,7 @@ body.audio-desc .card{cursor:pointer}
 .phone-nav{display:none;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
 .phone-nav .btn{padding:6px 10px;font-size:.75rem}
 .phone-pos{font-size:.75rem;font-weight:700;color:var(--navy);min-width:3.4em;text-align:center}
+.phone-hint{display:none;font-size:.68rem;font-weight:500;color:var(--muted);line-height:1.25;max-width:16em}
 .phone-park{display:none}
 body.phone .phone-nav{display:flex}
 body.phone .tip,body.phone .message{display:none}
@@ -251,16 +252,25 @@ body.phone.phone-all .bank-wrap{margin-bottom:4px;padding:6px 8px}
 body.phone.phone-all #deck{max-height:36vh;overflow:auto}
 body.phone.phone-all .phone-park,body.phone.phone-all .tl-wrap{display:none}
 body.phone:not(.phone-all) .phone-park{display:flex}
+body.phone .phone-hint{display:inline}
+body.phone .card-body,body.phone .drop-zone .card-body{display:none}
 body.phone .card.phone-current,body.phone .card.phone-selected{box-shadow:0 0 0 3px rgba(232,160,32,.45)}
 body.phone .tl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0;margin-bottom:4px;padding:6px 6px 4px}
-body.phone .tl-inner{min-width:820px;flex:1}
+body.phone .tl-inner{min-width:920px;flex:1}
 body.phone .tl-slots{flex:1}
+body.phone .tl-col,body.phone .tl-tick-col,body.phone .tl-date-col{min-width:48px}
+body.phone .tl-col.phone-park,body.phone .tl-tick-col.phone-park,body.phone .tl-date-col.phone-park{
+  flex:0 0 168px;min-width:168px;max-width:200px
+}
 body.phone .tl-date{font-size:.5rem}
 body.phone .tl-label{margin-bottom:4px;gap:8px}
 body.phone .tl-label>svg,body.phone .tl-caption{display:none}
 body.phone .drop-zone{min-height:0}
-body.phone .drop-zone .card{width:min(100%,78px)}
+body.phone .drop-zone .card{width:min(100%,72px)}
+body.phone .drop-zone .card-top{min-height:0;padding:2px;font-size:.5rem}
 body.phone #phone-park{outline:2px dashed var(--gold);background:#fff8e8}
+body.phone #phone-park .card{width:100%;max-width:none;flex:1 1 auto}
+body.phone #phone-park .card-top{display:none}
 body.phone .drop-zone.phone-target:not(#phone-park){background:#e8f0fb;border-color:var(--navy2)}
 body.phone .tl-date-col{cursor:pointer;padding:4px 0 2px}
 body.phone .phone-park .tl-date{color:var(--gold)}
@@ -382,6 +392,7 @@ body.phone .hint-count,body.phone .score{padding:6px 9px;font-size:.7rem;margin-
         <button class="btn btn-secondary" id="cardPrev" type="button" aria-label="Carte précédente">◀</button>
         <span class="phone-pos" id="phone-pos">0 / 0</span>
         <button class="btn btn-secondary" id="cardNext" type="button" aria-label="Carte suivante">▶</button>
+        <span class="phone-hint">Touche une date pour y placer la carte</span>
         <button class="btn btn-secondary" id="toggleBank" type="button">Toutes les cartes</button>
       </div>
     </div>
