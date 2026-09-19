@@ -282,6 +282,33 @@ body.phone .hint-count,body.phone .score{padding:6px 9px;font-size:.7rem;margin-
   .rotate-tip{display:flex}
   header,main{visibility:hidden}
 }
+body.game-on .rotate-tip{display:none!important}
+body.game-on header,body.game-on main{visibility:hidden}
+.game-overlay{display:none;position:fixed;inset:0;z-index:85;background:var(--bg);flex-direction:column;overflow:auto}
+body.game-on .game-overlay{display:flex}
+.game-bar{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.game-bar h2{font-family:'Playfair Display',serif;font-size:1.15rem}
+.game-code-big{font-size:2.4rem;letter-spacing:.28em;font-weight:800}
+.game-lobby{max-width:520px;margin:28px auto;padding:0 16px;display:flex;flex-direction:column;gap:12px}
+.game-board{display:none;flex:1;flex-direction:column;min-height:0;padding:10px 12px 12px;gap:10px}
+.game-board.show{display:flex}
+.game-status{background:#fff;border-radius:10px;padding:8px 12px;font-size:.88rem;color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.game-center{background:#fff;border-radius:12px;padding:10px;overflow-x:auto;flex:1;min-height:140px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.game-row{display:flex;align-items:stretch;gap:6px;min-height:120px}
+.game-slot{min-width:28px;border:2px dashed #c5d0e0;border-radius:8px;background:#f8fafc;cursor:pointer;align-self:stretch}
+.game-slot.on{border-color:var(--gold);background:#fff8e8}
+.gcard{width:110px;flex-shrink:0;border:2px solid var(--navy);border-radius:10px;background:#fff;overflow:hidden;cursor:pointer}
+.gcard img{width:100%;height:88px;object-fit:contain;background:#f4f4f4;display:block}
+.gcard .gy{font-size:.68rem;font-weight:700;text-align:center;padding:4px;color:var(--navy)}
+.gcard.sel{outline:3px solid var(--gold)}
+.gback{width:52px;height:72px;border-radius:8px;background:linear-gradient(135deg,var(--navy),var(--navy2));flex-shrink:0}
+.game-hands{display:flex;flex-wrap:wrap;gap:10px}
+.game-hand{background:#fff;border-radius:12px;padding:8px 10px;flex:1;min-width:240px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.game-hand h3{font-size:.78rem;color:var(--navy);margin-bottom:6px}
+.game-mine{display:flex;gap:6px;overflow-x:auto}
+#game-join-code,#game-share{padding:10px 12px;border:1.5px solid #c5d0e0;border-radius:8px;font-size:1.05rem}
+#game-join-code{letter-spacing:.2em;text-transform:uppercase;width:140px;font-weight:700}
+#game-share{width:100%}
 .resume-modal{
   display:none;position:fixed;inset:0;z-index:80;background:rgba(16,28,52,.55);
   align-items:center;justify-content:center;padding:20px
@@ -320,6 +347,7 @@ body.phone .hint-count,body.phone .score{padding:6px 9px;font-size:.7rem;margin-
   .print-copy .tl-date{font-size:9pt}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 <div id="resume-modal" class="resume-modal" role="dialog" aria-modal="true" aria-labelledby="resume-title">
@@ -355,6 +383,47 @@ body.phone .hint-count,body.phone .score{padding:6px 9px;font-size:.7rem;margin-
       <div class="hint-count" id="hintCountModal" style="margin-left:0">Indices : 0 (frise 0 · principes 0)</div>
     </div>
     <p class="message" id="activity-msg"></p>
+  </div>
+</div>
+<div class="game-overlay" id="game-overlay">
+  <div class="game-bar">
+    <h2>Timeline à 2</h2>
+    <strong id="game-code-live"></strong>
+    <button class="btn btn-secondary" id="game-close" type="button">Quitter</button>
+  </div>
+  <div class="game-lobby" id="game-lobby">
+    <p>Chaque joueur reçoit 5 cartes. Une carte est déjà au centre. À ton tour, choisis une carte (la date est cachée) puis touche l’emplacement où tu penses qu’elle se place. Si c’est juste, tu t’en débarrasses. Si tu te trompes, elle retourne dans la pioche et tu en pioches une autre. Le premier à 0 cartes gagne.</p>
+    <button class="btn btn-primary" id="game-create" type="button">Créer une partie (tu es l’hôte)</button>
+    <div id="game-host-block" style="display:none">
+      <p>Donne ce code à l’autre joueur, ou envoie-lui le lien :</p>
+      <div class="game-code-big" id="game-code-big"></div>
+      <div class="controls">
+        <button class="btn btn-primary" id="game-copy" type="button">Copier le code</button>
+        <button class="btn btn-secondary" id="game-copy-link" type="button">Copier le lien</button>
+      </div>
+      <input id="game-share" readonly aria-label="Lien de la partie">
+      <p id="game-wait" style="margin-top:8px"></p>
+    </div>
+    <p>Ou rejoins une partie avec le code affiché chez l’hôte :</p>
+    <div class="controls">
+      <input id="game-join-code" maxlength="4" placeholder="CODE" autocomplete="off" aria-label="Code de la partie">
+      <button class="btn btn-primary" id="game-join" type="button">Rejoindre</button>
+    </div>
+    <p id="game-join-wait"></p>
+  </div>
+  <div class="game-board" id="game-board">
+    <div class="game-status" id="game-status"></div>
+    <div class="game-center"><div class="game-row" id="game-row"></div></div>
+    <div class="game-hands">
+      <div class="game-hand">
+        <h3>Tes cartes (date cachée)</h3>
+        <div class="game-mine" id="game-mine"></div>
+      </div>
+      <div class="game-hand">
+        <h3>Cartes de l’autre joueur</h3>
+        <div class="game-mine" id="game-opp"></div>
+      </div>
+    </div>
   </div>
 </div>
 <header>
@@ -414,6 +483,7 @@ body.phone .hint-count,body.phone .score{padding:6px 9px;font-size:.7rem;margin-
     <button class="btn btn-secondary" id="printTl" type="button">Imprimer mes réponses</button>
     <button class="btn btn-secondary btn-audio" id="audioDesc" type="button" aria-pressed="false" title="Activer la description audio des cartes">Description audio</button>
     <button class="btn btn-primary" id="openActivity" type="button">Théorie cellulaire, activité</button>
+    <button class="btn btn-primary" id="openGame" type="button">Mode jeu à 2</button>
     <div class="hint-count" id="hintCount">Indices : 0 (frise 0 · principes 0)</div>
     <div class="score" id="score">0 / 0</div>
   </div>
@@ -1124,6 +1194,224 @@ function printTimeline(){
   const done=()=>{document.body.classList.remove("printing");sheet.innerHTML="";window.removeEventListener("afterprint",done)};
   window.addEventListener("afterprint",done);
   window.print();
+}
+const PEER_PREFIX="t1a-cell-tl-";
+const CODE_CHARS="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+let game={role:null,code:"",peer:null,conn:null,state:null,selected:null};
+function evById(id){return events.find(e=>e.id===id);}
+function evDate(id){return evById(id).date;}
+function randCode(){
+  let s="";
+  for(let i=0;i<4;i++) s+=CODE_CHARS[Math.floor(Math.random()*CODE_CHARS.length)];
+  return s;
+}
+function shareUrl(code){return location.href.split("#")[0]+"#jeu="+code;}
+function openGameLobby(){document.body.classList.add("game-on");}
+function resetGameNet(){
+  try{if(game.conn) game.conn.close();}catch(err){}
+  try{if(game.peer) game.peer.destroy();}catch(err){}
+  game={role:null,code:"",peer:null,conn:null,state:null,selected:null};
+}
+function closeGame(){
+  resetGameNet();
+  document.body.classList.remove("game-on");
+  document.getElementById("game-host-block").style.display="none";
+  document.getElementById("game-board").classList.remove("show");
+  document.getElementById("game-lobby").style.display="flex";
+  if(/#jeu=/i.test(location.hash)) history.replaceState(null,"",location.pathname+location.search);
+}
+function dealState(){
+  const ids=events.map(e=>e.id);
+  for(let i=ids.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [ids[i],ids[j]]=[ids[j],ids[i]];
+  }
+  return {
+    pile:ids.slice(11),
+    hostHand:ids.slice(0,5),
+    guestHand:ids.slice(5,10),
+    center:[ids[10]],
+    turn:"host",
+    winner:null,
+    lastMsg:"Première carte posée. L’hôte commence."
+  };
+}
+function sendState(){
+  if(game.conn&&game.conn.open) game.conn.send({type:"state",state:game.state});
+}
+function myHand(){return game.role==="host"?game.state.hostHand:game.state.guestHand;}
+function oppHand(){return game.role==="host"?game.state.guestHand:game.state.hostHand;}
+function isMyTurn(){return game.state&&!game.state.winner&&game.state.turn===game.role;}
+function cardFits(cardId,slot){
+  const d=evDate(cardId);
+  const left=slot===0?-Infinity:evDate(game.state.center[slot-1]);
+  const right=slot>=game.state.center.length?Infinity:evDate(game.state.center[slot]);
+  return d>=left&&d<=right;
+}
+function applyPlace(role,cardId,slot){
+  const st=game.state;
+  if(!st||st.winner||st.turn!==role) return;
+  const hand=role==="host"?st.hostHand:st.guestHand;
+  const i=hand.indexOf(cardId);
+  if(i<0||slot<0||slot>st.center.length) return;
+  hand.splice(i,1);
+  const who=role==="host"?"L’hôte":"L’invité";
+  if(cardFits(cardId,slot)){
+    st.center.splice(slot,0,cardId);
+    st.lastMsg=who+" a bien placé une carte.";
+    if(!hand.length){st.winner=role;st.lastMsg=who+" a gagné !";}
+  }else{
+    st.pile.push(cardId);
+    if(st.pile.length) hand.push(st.pile.shift());
+    st.lastMsg=who+" s’est trompé : la carte retourne dans la pioche.";
+  }
+  if(!st.winner) st.turn=st.turn==="host"?"guest":"host";
+}
+function yearLabel(d){return d<0?(-d)+" av. J.-C.":String(d);}
+function gcard(id,showDate,selectable){
+  const e=evById(id);
+  const el=document.createElement("div");
+  el.className="gcard"+(game.selected===id?" sel":"");
+  el.innerHTML="<img alt=\"\" src=\""+e.img+"\"><div class=\"gy\">"+(showDate?yearLabel(e.date):"?")+"</div>";
+  if(selectable) el.onclick=()=>{game.selected=id;renderGame();};
+  return el;
+}
+function renderGame(){
+  const lobby=document.getElementById("game-lobby");
+  const board=document.getElementById("game-board");
+  if(!game.state){
+    lobby.style.display="flex";
+    board.classList.remove("show");
+    return;
+  }
+  lobby.style.display="none";
+  board.classList.add("show");
+  document.getElementById("game-code-live").textContent=game.code?"Code "+game.code:"";
+  const wait=isMyTurn()?" À toi de jouer.":(game.state.winner?"":" En attente de l’autre joueur.");
+  document.getElementById("game-status").textContent=game.state.lastMsg+wait;
+  const row=document.getElementById("game-row");
+  row.innerHTML="";
+  const n=game.state.center.length;
+  for(let s=0;s<=n;s++){
+    const slot=document.createElement("div");
+    slot.className="game-slot"+(isMyTurn()&&game.selected?" on":"");
+    if(isMyTurn()&&game.selected){
+      const si=s;
+      slot.onclick=()=>tryPlace(si);
+    }
+    row.appendChild(slot);
+    if(s<n) row.appendChild(gcard(game.state.center[s],true,false));
+  }
+  const mine=document.getElementById("game-mine");
+  mine.innerHTML="";
+  myHand().forEach(id=>mine.appendChild(gcard(id,false,true)));
+  const opp=document.getElementById("game-opp");
+  opp.innerHTML="";
+  oppHand().forEach(()=>{
+    const b=document.createElement("div");
+    b.className="gback";
+    opp.appendChild(b);
+  });
+}
+function tryPlace(slot){
+  if(!game.selected||!isMyTurn()) return;
+  const cardId=game.selected;
+  game.selected=null;
+  if(game.role==="host"){
+    applyPlace("host",cardId,slot);
+    sendState();
+    renderGame();
+  }else if(game.conn&&game.conn.open){
+    game.conn.send({type:"place",cardId,slot});
+  }
+}
+function wireConn(conn){
+  game.conn=conn;
+  conn.on("data",msg=>{
+    if(!msg||typeof msg!=="object") return;
+    if(game.role==="host"&&msg.type==="place"){
+      applyPlace("guest",msg.cardId,msg.slot);
+      sendState();
+      renderGame();
+    }
+    if(msg.type==="state"){
+      game.state=msg.state;
+      renderGame();
+    }
+  });
+  conn.on("close",()=>{
+    const el=document.getElementById("game-status");
+    if(el) el.textContent="L’autre joueur s’est déconnecté.";
+  });
+}
+function startHost(){
+  if(typeof Peer==="undefined"){alert("Connexion indisponible. Vérifie Internet.");return;}
+  resetGameNet();
+  game.role="host";
+  game.code=randCode();
+  document.getElementById("game-host-block").style.display="block";
+  document.getElementById("game-code-big").textContent=game.code;
+  document.getElementById("game-share").value=shareUrl(game.code);
+  document.getElementById("game-wait").textContent="Ouverture de la salle…";
+  game.peer=new Peer(PEER_PREFIX+game.code);
+  game.peer.on("open",()=>{
+    document.getElementById("game-wait").textContent="En attente de l’invité…";
+  });
+  game.peer.on("error",err=>{
+    document.getElementById("game-wait").textContent="Erreur de connexion. Réessaie de créer une partie.";
+  });
+  game.peer.on("connection",conn=>{
+    wireConn(conn);
+    conn.on("open",()=>{
+      game.state=dealState();
+      sendState();
+      renderGame();
+    });
+  });
+}
+function startGuest(code){
+  code=String(code||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,4);
+  if(code.length!==4){alert("Entre le code à 4 caractères affiché chez l’hôte.");return;}
+  if(typeof Peer==="undefined"){alert("Connexion indisponible. Vérifie Internet.");return;}
+  resetGameNet();
+  game.role="guest";
+  game.code=code;
+  document.getElementById("game-join-wait").textContent="Connexion…";
+  game.peer=new Peer();
+  game.peer.on("open",()=>{
+    const conn=game.peer.connect(PEER_PREFIX+code);
+    wireConn(conn);
+    conn.on("open",()=>{
+      document.getElementById("game-join-wait").textContent="Connecté, en attente de la partie…";
+    });
+  });
+  game.peer.on("error",()=>{
+    alert("Impossible de rejoindre. Vérifie le code et qu’un hôte a bien créé la partie.");
+  });
+}
+function copyText(text,btn){
+  const done=()=>{
+    const old=btn.textContent;
+    btn.textContent="Copié !";
+    setTimeout(()=>{btn.textContent=old;},1200);
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>{});
+  }
+}
+document.getElementById("openGame").onclick=openGameLobby;
+document.getElementById("game-close").onclick=closeGame;
+document.getElementById("game-create").onclick=startHost;
+document.getElementById("game-join").onclick=()=>startGuest(document.getElementById("game-join-code").value);
+document.getElementById("game-copy").onclick=()=>copyText(game.code,document.getElementById("game-copy"));
+document.getElementById("game-copy-link").onclick=()=>copyText(shareUrl(game.code),document.getElementById("game-copy-link"));
+document.getElementById("game-join-code").addEventListener("keydown",e=>{
+  if(e.key==="Enter") startGuest(e.target.value);
+});
+const hashGame=location.hash.match(/#jeu=([A-Za-z0-9]{4})/i);
+if(hashGame){
+  openGameLobby();
+  startGuest(hashGame[1]);
 }
 </script>
 </body>
