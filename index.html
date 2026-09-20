@@ -219,6 +219,8 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
 .card-listen svg{width:12px;height:12px;display:block;margin:auto}
 body.audio-desc .card-listen{display:grid;place-items:center}
 body.audio-desc .card{cursor:pointer}
+.card.drag-ghost{position:fixed;left:0;top:0;z-index:200;pointer-events:none;opacity:.92;margin:0;box-shadow:0 10px 24px rgba(26,53,102,.28)}
+.card.correct,.card.locked{cursor:default}
 .print-copy .card-listen{display:none!important}
 .hint-count{background:#fff;border:1.5px solid #c5d0e0;color:var(--navy);padding:10px 16px;border-radius:8px;
   font-size:.82rem;font-weight:600;margin-left:auto;white-space:nowrap}
@@ -281,7 +283,8 @@ body.phone .controls{gap:6px;padding:0 6px}
 body.phone .controls .btn{padding:6px 9px;font-size:.7rem}
 body.phone .hint-count,body.phone .score{padding:6px 9px;font-size:.7rem;margin-left:0}
 .print-copy .phone-park{display:none!important}
-@media(orientation:portrait) and (pointer:coarse){
+@media (orientation:portrait) and (pointer:coarse),
+       (orientation:portrait) and (max-width:1180px){
   .rotate-tip{display:flex}
   header,main{visibility:hidden}
 }
@@ -467,7 +470,7 @@ body.game-on .game-overlay{display:flex}
   <span class="badge">SVT · 1ère ESc</span>
 </header>
 
-<div class="rotate-tip" id="rotate-tip">Tourne ton téléphone <strong>en paysage</strong> pour voir la frise et placer les cartes.</div>
+<div class="rotate-tip" id="rotate-tip">Tourne ton téléphone ou ta tablette <strong>en paysage</strong> pour voir la frise et placer les cartes.</div>
 <main>
   <div class="tip">
     <strong>Comment jouer :</strong> Fais glisser chaque carte depuis la zone de cartes et dépose-la à sa date sur la frise. Plusieurs cartes peuvent partager la même date. Quand tu es prêt, clique sur <strong>Vérifier</strong>. L’activité sur la théorie cellulaire s’ouvre avec le bouton dédié.
@@ -488,6 +491,8 @@ body.game-on .game-overlay{display:flex}
         <button class="btn btn-secondary" id="cardPrev" type="button" aria-label="Carte précédente">◀</button>
         <span class="phone-pos" id="phone-pos">0 / 0</span>
         <button class="btn btn-secondary" id="cardNext" type="button" aria-label="Carte suivante">▶</button>
+        <button class="btn btn-secondary" id="undoMove" type="button" disabled title="Annuler le dernier placement (Ctrl+Z)">Annuler</button>
+        <button class="btn btn-secondary" id="redoMove" type="button" disabled title="Rétablir (Ctrl+Y)">Rétablir</button>
         <span class="phone-hint">Touche une date pour y placer la carte</span>
         <button class="btn btn-secondary" id="toggleBank" type="button">Toutes les cartes</button>
       </div>
@@ -539,6 +544,8 @@ const markCount=document.getElementById("mark-count");
 const SAVE_KEY="timeline-theorie-cellulaire-v1";
 let skipSave=false;
 let hintsFrise=0,hintsPrincipes=0;
+let undoStack=[];
+let redoStack=[];
 
 function updateHintCount(){
   const text=`Indices : ${hintsFrise+hintsPrincipes}  (frise ${hintsFrise} · principes ${hintsPrincipes})`;
@@ -588,6 +595,7 @@ function restartFresh(){
   clearSave();
   hideResume();
   closeActivity();
+  clearHistory();
   build();
 }
 function hideResume(){
@@ -611,6 +619,24 @@ function speakCard(e){
   speechSynthesis.speak(u);
 }
 if(window.speechSynthesis) speechSynthesis.addEventListener("voiceschanged",()=>{});
+function isCardLocked(card){return Boolean(card&&card.classList.contains("correct"));}
+function syncCardLocks(){
+  document.querySelectorAll(".card").forEach(c=>{
+    const lock=isCardLocked(c);
+    c.classList.toggle("locked",lock);
+    c.draggable=!lock;
+  });
+}
+function dropFromPoint(x,y){
+  const el=document.elementFromPoint(x,y);
+  if(!el) return null;
+  const drop=el.closest(".drop-zone");
+  if(drop&&drop.dataset.date!=="park") return drop;
+  const col=el.closest(".tl-date-col");
+  if(col&&col.dataset.date!=="park") return document.querySelector(`.drop-zone[data-date="${col.dataset.date}"]`);
+  if(el.closest("#deck,.bank-wrap")) return deck;
+  return null;
+}
 function makeCard(e){
   const el=document.createElement("div");
   el.className="card";
@@ -618,6 +644,7 @@ function makeCard(e){
   el.dataset.id=e.id;
   el.innerHTML=`<div class="card-top">Carte</div><img src="${e.img}" alt="${e.label}"><div class="card-body"><div class="card-name">${shortLabel(e.label)}</div></div><button class="card-listen" type="button" aria-label="Écouter la description de la carte" title="Écouter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18 6a8 8 0 0 1 0 12"/></svg></button>`;
   el.addEventListener("dragstart",ev=>{
+    if(isCardLocked(el)){ev.preventDefault();return;}
     if(ev.target.closest && ev.target.closest(".card-mark, .card-listen")) return;
     dragMark=null;dragMarkFrom=null;
     dragId=e.id;el.classList.add("dragging");ev.dataTransfer.setData("text/plain",e.id);
@@ -641,6 +668,14 @@ function makeCard(e){
       return;
     }
     if(isPhoneUI()){
+      if(el.classList.contains("placed")){
+        if(!isCardLocked(el)){
+          selectedCardId=e.id;
+          document.querySelectorAll(".card").forEach(c=>c.classList.toggle("phone-selected",c.dataset.id===e.id));
+          setPhoneTargets(true);
+        }
+        return;
+      }
       pickPhoneCard(e.id);
       return;
     }
@@ -708,6 +743,7 @@ function build(){
   startStep2();
   hintsFrise=0;hintsPrincipes=0;updateHintCount();
   skipSave=false;
+  clearHistory();
   saveState();
   updatePhoneDeck();
 }
@@ -745,6 +781,7 @@ function restore(saved){
   hintsPrincipes=Number(saved.hintsPrincipes)||0;
   updateHintCount();
   skipSave=false;
+  syncCardLocks();
   updatePhoneDeck();
 }
 function wireDrops(){
@@ -780,9 +817,11 @@ function wireDrops(){
     });
   });
 }
-function place(id,drop){
+function place(id,drop,record){
   const card=document.querySelector(`.card[data-id="${id}"]`);
   if(!card||!drop) return;
+  if(record!==false&&isCardLocked(card)) return;
+  const from=cardZone(card);
   drop.appendChild(card);
   if(drop.dataset.date==="park"){
     card.classList.remove("placed","correct","wrong");
@@ -790,6 +829,7 @@ function place(id,drop){
     card.classList.add("placed");
     card.classList.remove("correct","wrong");
     if(selectedCardId===id) selectedCardId=null;
+    if(record!==false) recordMove(id,from,{type:"date",date:drop.dataset.date});
   }
   updateScore();
   saveState();
@@ -807,9 +847,11 @@ deck.addEventListener("drop",e=>{
   const id=e.dataTransfer.getData("text/plain")||dragId;
   if(["1","2","3"].includes(String(id||""))) return;
   const card=document.querySelector(`.card[data-id="${id}"]`);
-  if(card){
+  if(card&&!isCardLocked(card)){
+    const from=cardZone(card);
     deck.appendChild(card);
     card.classList.remove("placed","correct","wrong");
+    recordMove(id,from,{type:"deck"});
     updateScore();
     saveState();
     updatePhoneDeck();
@@ -820,9 +862,12 @@ function unplacedCards(){
   return [...document.querySelectorAll("#deck .card, #phone-park .card")];
 }
 function phonePlaceId(){
+  if(selectedCardId){
+    const sel=document.querySelector(`.card[data-id="${selectedCardId}"]`);
+    if(sel&&!isCardLocked(sel)) return selectedCardId;
+  }
   const park=document.querySelector("#phone-park .card");
   if(park) return park.dataset.id;
-  if(selectedCardId&&document.querySelector(`#deck .card[data-id="${selectedCardId}"]`)) return selectedCardId;
   const cur=document.querySelector(".card.phone-current");
   return cur?cur.dataset.id:null;
 }
@@ -883,9 +928,68 @@ function cyclePhone(dir){
   i=(i+dir+cards.length)%cards.length;
   pickPhoneCard(cards[i].dataset.id);
 }
+function cardZone(card){
+  const drop=card&&card.closest&&card.closest(".drop-zone");
+  if(!drop) return {type:"deck"};
+  if(drop.dataset.date==="park") return {type:"park"};
+  return {type:"date",date:drop.dataset.date};
+}
+function sameZone(a,b){
+  return a&&b&&a.type===b.type&&a.date===b.date;
+}
+function updateUndoButtons(){
+  const u=document.getElementById("undoMove");
+  const r=document.getElementById("redoMove");
+  if(u) u.disabled=!undoStack.length;
+  if(r) r.disabled=!redoStack.length;
+}
+function clearHistory(){
+  undoStack=[];
+  redoStack=[];
+  updateUndoButtons();
+}
+function recordMove(id,from,to){
+  if(skipSave||!id||sameZone(from,to)) return;
+  if(from.type==="park") from={type:"deck"};
+  if(to.type==="park") return;
+  undoStack.push({id,from,to});
+  redoStack=[];
+  updateUndoButtons();
+}
+function applyZone(id,zone){
+  const card=document.querySelector(`.card[data-id="${id}"]`);
+  if(!card||!zone) return;
+  if(zone.type==="date"){
+    const drop=document.querySelector(`.drop-zone[data-date="${zone.date}"]`);
+    if(drop) place(id,drop,false);
+    return;
+  }
+  deck.appendChild(card);
+  card.classList.remove("placed","correct","wrong");
+  if(selectedCardId===id) selectedCardId=null;
+  updateScore();
+  saveState();
+  updatePhoneDeck();
+}
+function undoMove(){
+  const step=undoStack.pop();
+  if(!step) return;
+  applyZone(step.id,step.from);
+  redoStack.push(step);
+  updateUndoButtons();
+}
+function redoMove(){
+  const step=redoStack.pop();
+  if(!step) return;
+  applyZone(step.id,step.to);
+  undoStack.push(step);
+  updateUndoButtons();
+}
 function syncPhone(){
   const coarse=window.matchMedia("(pointer:coarse)").matches;
-  const phone=coarse||window.innerWidth<760;
+  const touch=navigator.maxTouchPoints>1;
+  const short=Math.min(window.innerWidth,window.innerHeight);
+  const phone=coarse||(touch&&short<=1024)||window.innerWidth<900;
   document.body.classList.toggle("phone",phone);
   if(phone) updatePhoneDeck();
   else{
@@ -1061,6 +1165,7 @@ function check(){
   }
   msg.classList.add("show");
   scoreEl.textContent=`${ok} / ${events.length}`;
+  syncCardLocks();
   saveState();
 }
 function checkMarks(){
@@ -1134,12 +1239,75 @@ document.getElementById("activity-modal").addEventListener("click",e=>{
 });
 document.getElementById("cardPrev").onclick=()=>cyclePhone(-1);
 document.getElementById("cardNext").onclick=()=>cyclePhone(1);
+document.getElementById("undoMove").onclick=undoMove;
+document.getElementById("redoMove").onclick=redoMove;
 document.getElementById("toggleBank").onclick=()=>{
   document.body.classList.toggle("phone-all");
   if(document.body.classList.contains("phone-all")) setPhoneTargets(false);
   else updatePhoneDeck();
   updateToggleBank();
 };
+let ptrDrag=null;
+document.addEventListener("pointerdown",e=>{
+  if(e.button) return;
+  if(!(e.pointerType==="touch"||e.pointerType==="pen"||isPhoneUI()||window.matchMedia("(pointer:coarse)").matches)) return;
+  if(document.body.classList.contains("game-on")||document.body.classList.contains("printing")) return;
+  const modal=document.getElementById("activity-modal");
+  if(modal&&modal.classList.contains("show")) return;
+  const card=e.target.closest&&e.target.closest(".card");
+  if(!card||isCardLocked(card)) return;
+  if(e.target.closest(".card-mark,.card-listen")) return;
+  ptrDrag={id:card.dataset.id,card,x:e.clientX,y:e.clientY,started:false,pid:e.pointerId,ghost:null};
+},true);
+document.addEventListener("pointermove",e=>{
+  if(!ptrDrag||e.pointerId!==ptrDrag.pid) return;
+  const dx=e.clientX-ptrDrag.x,dy=e.clientY-ptrDrag.y;
+  if(!ptrDrag.started){
+    if(dx*dx+dy*dy<81) return;
+    ptrDrag.started=true;
+    const g=ptrDrag.card.cloneNode(true);
+    g.classList.add("drag-ghost");
+    g.style.width=ptrDrag.card.offsetWidth+"px";
+    document.body.appendChild(g);
+    ptrDrag.ghost=g;
+    ptrDrag.card.classList.add("dragging");
+    try{ptrDrag.card.setPointerCapture(e.pointerId);}catch(err){}
+  }
+  e.preventDefault();
+  if(ptrDrag.ghost){
+    ptrDrag.ghost.style.transform="translate("+(e.clientX-ptrDrag.card.offsetWidth/2)+"px,"+(e.clientY-36)+"px)";
+  }
+  document.querySelectorAll(".drop-zone").forEach(z=>z.classList.remove("drag-over"));
+  const over=dropFromPoint(e.clientX,e.clientY);
+  if(over&&over!==deck) over.classList.add("drag-over");
+},{passive:false});
+document.addEventListener("pointerup",e=>{
+  if(!ptrDrag||e.pointerId!==ptrDrag.pid) return;
+  const info=ptrDrag;
+  ptrDrag=null;
+  if(info.ghost) info.ghost.remove();
+  info.card.classList.remove("dragging");
+  document.querySelectorAll(".drop-zone").forEach(z=>z.classList.remove("drag-over"));
+  if(!info.started) return;
+  const over=dropFromPoint(e.clientX,e.clientY);
+  if(over===deck){
+    const from=cardZone(info.card);
+    deck.appendChild(info.card);
+    info.card.classList.remove("placed","correct","wrong","locked");
+    info.card.draggable=true;
+    recordMove(info.id,from,{type:"deck"});
+    updateScore();
+    saveState();
+    updatePhoneDeck();
+  }else if(over) place(info.id,over);
+},true);
+document.addEventListener("pointercancel",()=>{
+  if(!ptrDrag) return;
+  if(ptrDrag.ghost) ptrDrag.ghost.remove();
+  ptrDrag.card.classList.remove("dragging");
+  document.querySelectorAll(".drop-zone").forEach(z=>z.classList.remove("drag-over"));
+  ptrDrag=null;
+});
 window.addEventListener("resize",syncPhone);
 window.addEventListener("orientationchange",syncPhone);
 syncPhone();
@@ -1188,7 +1356,24 @@ document.addEventListener("click",e=>{
   enterFullscreen();
 });
 document.addEventListener("keydown",e=>{
+  const inField=e.target&&(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA");
+  if(!inField&&(e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==="z"){
+    e.preventDefault();
+    if(e.shiftKey) redoMove();
+    else undoMove();
+    return;
+  }
+  if(!inField&&(e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==="y"){
+    e.preventDefault();
+    redoMove();
+    return;
+  }
   if(e.key!=="Escape"&&e.key!=="Backspace"&&e.key!=="Delete") return;
+  if(e.key==="Backspace"&&!inField&&undoStack.length){
+    e.preventDefault();
+    undoMove();
+    return;
+  }
   if(!isFullscreen()) return;
   e.preventDefault();
   exitFullscreen();
