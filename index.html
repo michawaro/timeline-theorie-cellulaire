@@ -50,8 +50,9 @@ main{padding:12px 18px 8px;width:100%;max-width:none;flex:1;display:flex;flex-di
   transition:transform .2s ease,box-shadow .2s ease,outline .2s;user-select:none;
   -webkit-user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none;
   position:relative;flex-shrink:0;border:2px solid var(--navy);background:#fff;
-  transform-origin:center center;touch-action:none
+  transform-origin:center center
 }
+body.phone .card{touch-action:none}
 .card img{-webkit-touch-callout:none;-webkit-user-drag:none;pointer-events:none;user-select:none}
 @media(hover:hover) and (pointer:fine){
   .card:hover{
@@ -1299,37 +1300,44 @@ document.addEventListener("touchstart",e=>{
 },{passive:false});
 document.addEventListener("pointerdown",e=>{
   if(e.button) return;
-  if(!(e.pointerType==="touch"||e.pointerType==="pen"||isPhoneUI()||window.matchMedia("(pointer:coarse)").matches)) return;
+  if(e.pointerType==="mouse") return;
   const card=cardAllowsDrag(e.target);
   if(!card) return;
-  if(e.pointerType==="touch"||e.pointerType==="pen") e.preventDefault();
+  e.preventDefault();
   const box=card.getBoundingClientRect();
+  const zone=cardZone(card);
   ptrDrag={id:card.dataset.id,card,x:e.clientX,y:e.clientY,started:false,pid:e.pointerId,ghost:null,
-    originX:box.left,originY:box.top,w:box.width,h:box.height,offX:e.clientX-box.left};
+    originX:box.left,originY:box.top,w:box.width,h:box.height,offX:e.clientX-box.left,offY:e.clientY-box.top,
+    railOnly:zone.type==="date"||zone.type==="park"};
   try{card.setPointerCapture(e.pointerId);}catch(err){}
 },true);
 function railRect(){
   const slots=document.getElementById("tl-slots");
   return (slots||document.querySelector(".tl-wrap")).getBoundingClientRect();
 }
-function ghostLeft(clientX){
-  const rail=railRect();
-  let x=clientX-ptrDrag.offX;
-  return Math.max(rail.left,Math.min(rail.right-ptrDrag.w,x));
+function ghostPos(clientX,clientY){
+  if(!ptrDrag) return {x:clientX,y:clientY};
+  if(ptrDrag.railOnly){
+    const rail=railRect();
+    const x=Math.max(rail.left,Math.min(rail.right-ptrDrag.w,clientX-ptrDrag.offX));
+    return {x:x,y:ptrDrag.originY};
+  }
+  return {x:clientX-ptrDrag.offX,y:clientY-ptrDrag.offY};
 }
-function moveGhost(clientX){
+function moveGhost(clientX,clientY){
   if(!ptrDrag||!ptrDrag.ghost) return;
-  const x=ghostLeft(clientX);
-  const dx=x-ptrDrag.originX;
-  ptrDrag.ghost.style.transform="translate("+dx+"px,-8px)";
+  const p=ghostPos(clientX,clientY);
+  const dx=p.x-ptrDrag.originX;
+  const dy=p.y-ptrDrag.originY+(ptrDrag.railOnly?-8:0);
+  ptrDrag.ghost.style.transform="translate("+dx+"px,"+dy+"px)";
   const wrap=document.querySelector(".tl-wrap");
   const rail=railRect();
-  if(wrap){
+  if(wrap&&ptrDrag.railOnly){
     if(clientX>rail.right-36) wrap.scrollLeft+=14;
     else if(clientX<rail.left+36) wrap.scrollLeft-=14;
   }
   document.querySelectorAll(".drop-zone").forEach(z=>z.classList.remove("drag-over"));
-  const over=dropFromPoint(x+ptrDrag.w/2,ptrDrag.originY+ptrDrag.h/2);
+  const over=dropFromPoint(p.x+ptrDrag.w/2,ptrDrag.railOnly?ptrDrag.originY+ptrDrag.h/2:p.y+ptrDrag.h/2);
   if(over&&over!==deck) over.classList.add("drag-over");
 }
 function clearPtrDrag(info){
@@ -1339,9 +1347,9 @@ function clearPtrDrag(info){
 }
 document.addEventListener("pointermove",e=>{
   if(!ptrDrag||e.pointerId!==ptrDrag.pid) return;
-  const dx=e.clientX-ptrDrag.x;
+  const dx=e.clientX-ptrDrag.x,dy=e.clientY-ptrDrag.y;
   if(!ptrDrag.started){
-    if(Math.abs(dx)<4) return;
+    if(dx*dx+dy*dy<16) return;
     ptrDrag.started=true;
     const g=ptrDrag.card.cloneNode(true);
     g.classList.add("drag-ghost");
@@ -1354,17 +1362,16 @@ document.addEventListener("pointermove",e=>{
     ptrDrag.card.classList.add("ptr-hold");
   }
   e.preventDefault();
-  moveGhost(e.clientX);
+  moveGhost(e.clientX,e.clientY);
 },{passive:false});
 document.addEventListener("pointerup",e=>{
   if(!ptrDrag||e.pointerId!==ptrDrag.pid) return;
   const info=ptrDrag;
-  const x=info.started?ghostLeft(e.clientX):e.clientX;
-  const y=info.originY+info.h/2;
+  const p=info.started?ghostPos(e.clientX,e.clientY):{x:e.clientX,y:e.clientY};
   ptrDrag=null;
   clearPtrDrag(info);
   if(!info.started) return;
-  const over=dropFromPoint(x+info.w/2,y);
+  const over=dropFromPoint(p.x+info.w/2,info.railOnly?info.originY+info.h/2:p.y+info.h/2);
   if(over===deck){
     const from=cardZone(info.card);
     deck.appendChild(info.card);
