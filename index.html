@@ -302,10 +302,26 @@ body.phone .hint-count,body.phone .score{padding:6px 9px;font-size:.7rem;margin-
   .rotate-tip{display:flex}
   header,main{visibility:hidden}
 }
-body.game-on .rotate-tip{display:none!important}
-body.game-on header,body.game-on main{visibility:hidden}
+body.game-on:not(.game-play) .rotate-tip{display:none!important}
+body.game-on:not(.game-play) header,body.game-on:not(.game-play) main{visibility:hidden}
 .game-overlay{display:none;position:fixed;inset:0;z-index:85;background:var(--bg);flex-direction:column;overflow:auto}
-body.game-on .game-overlay{display:flex}
+body.game-on:not(.game-play) .game-overlay{display:flex}
+body.game-play .game-overlay{display:none!important}
+.game-turn{display:none;font-size:.72rem;font-weight:700;color:var(--navy);background:#fff8e8;border:1px solid var(--gold);border-radius:999px;padding:3px 10px;line-height:1.2;max-width:16em}
+body.game-play .game-turn{display:inline-flex}
+.game-turn.wait{background:#f0f3f8;border-color:#c5d0e0;color:var(--muted)}
+body.game-play .tip,body.game-play #check,body.game-play #shuffle,body.game-play #hint,body.game-play #reset,body.game-play #printTl,body.game-play #openActivity,body.game-play #openGame,body.game-play .score,body.game-play .hint-count,body.game-play .phone-hint,body.game-play #toggleBank,body.game-play .js-undo,body.game-play .js-redo{display:none!important}
+body.phone.game-play .bank-wrap{display:none!important}
+body.game-play #game-quit-play{display:inline-flex!important}
+header .game-turn{color:#fff;background:rgba(255,248,232,.18);border-color:var(--gold)}
+body.phone.game-play header .game-turn{display:none!important}
+.card.game-start{box-shadow:0 0 0 3px #64748b}
+.card.game-p0{box-shadow:0 0 0 3px #e07a1f}
+.card.game-p1{box-shadow:0 0 0 3px #2b7de9}
+.card.game-p2{box-shadow:0 0 0 3px #1aa35a}
+.card.game-p3{box-shadow:0 0 0 3px #8b5cf6}
+.card.game-p4{box-shadow:0 0 0 3px #dc3d3d}
+.card.game-p5{box-shadow:0 0 0 3px #0d9488}
 .game-bar{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .game-bar h2{font-family:'Playfair Display',serif;font-size:1.15rem}
 .game-code-big{font-size:2.4rem;letter-spacing:.28em;font-weight:800}
@@ -482,6 +498,7 @@ body.game-on .game-overlay{display:flex}
     <p>Reconstruis la chronologie des découvertes scientifiques</p>
   </div>
   <span class="badge">SVT · 1ère ESc</span>
+  <span class="game-turn js-game-turn" hidden></span>
 </header>
 
 <div class="rotate-tip" id="rotate-tip">Tourne ton téléphone ou ta tablette <strong>en paysage</strong> pour voir la frise et placer les cartes.</div>
@@ -507,6 +524,7 @@ body.game-on .game-overlay{display:flex}
         <button class="btn btn-secondary" id="cardNext" type="button" aria-label="Carte suivante">▶</button>
         <button class="btn btn-secondary btn-icon js-undo" type="button" disabled aria-label="Annuler" title="Annuler (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
         <button class="btn btn-secondary btn-icon js-redo" type="button" disabled aria-label="Rétablir" title="Rétablir (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14 20 9l-5-5"/><path d="M20 9H9a6 6 0 0 0 0 12h3"/></svg></button>
+        <span class="game-turn js-game-turn" hidden></span>
         <span class="phone-hint">Glisse la carte ou touche une date</span>
         <button class="btn btn-secondary" id="toggleBank" type="button">Toutes les cartes</button>
       </div>
@@ -524,6 +542,7 @@ body.game-on .game-overlay{display:flex}
   <div class="controls">
     <button class="btn btn-secondary btn-icon js-undo" type="button" disabled aria-label="Annuler" title="Annuler (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
     <button class="btn btn-secondary btn-icon js-redo" type="button" disabled aria-label="Rétablir" title="Rétablir (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14 20 9l-5-5"/><path d="M20 9H9a6 6 0 0 0 0 12h3"/></svg></button>
+    <button class="btn btn-secondary" id="game-quit-play" type="button" style="display:none">Quitter le jeu</button>
     <button class="btn btn-primary" id="check">Vérifier mes réponses</button>
     <button class="btn btn-secondary" id="shuffle">Mélanger</button>
     <button class="btn btn-secondary" id="hint">Indice</button>
@@ -579,7 +598,7 @@ function hasProgress(s){
   return Boolean((s.placed&&s.placed.length)||(s.marks&&Object.keys(s.marks).length)||(s.hintsFrise||s.hintsPrincipes));
 }
 function saveState(){
-  if(skipSave) return;
+  if(skipSave||document.body.classList.contains("game-play")) return;
   try{
     const placed=[];
     document.querySelectorAll(".drop-zone").forEach(z=>{
@@ -655,7 +674,7 @@ function speakDate(dateStr){
   speakText(text);
 }
 if(window.speechSynthesis) speechSynthesis.addEventListener("voiceschanged",()=>{});
-function isCardLocked(card){return Boolean(card&&card.classList.contains("correct"));}
+function isCardLocked(card){return Boolean(card&&(card.classList.contains("correct")||card.classList.contains("game-fixed")));}
 function syncCardLocks(){
   document.querySelectorAll(".card").forEach(c=>{
     const lock=isCardLocked(c);
@@ -876,6 +895,13 @@ function wireDrops(){
   });
 }
 function place(id,drop,record){
+  if(document.body.classList.contains("game-play")&&game.state){
+    if(!drop||drop.dataset.date==="park") return;
+    if(!isMyTurn()||game.state.ended) return;
+    if(myHand().indexOf(id)<0) return;
+    tryPlaceGame(id,slotForDate(Number(drop.dataset.date)));
+    return;
+  }
   const card=document.querySelector(`.card[data-id="${id}"]`);
   if(!card||!drop) return;
   if(record!==false&&isCardLocked(card)) return;
@@ -917,7 +943,7 @@ deck.addEventListener("drop",e=>{
 });
 function isPhoneUI(){return document.body.classList.contains("phone")}
 function unplacedCards(){
-  return [...document.querySelectorAll("#deck .card, #phone-park .card")];
+  return [...document.querySelectorAll("#deck .card, #phone-park .card")].filter(c=>c.style.display!=="none");
 }
 function phonePlaceId(){
   if(selectedCardId){
@@ -1308,7 +1334,8 @@ function cardAllowsDrag(el){
   const card=el&&el.closest&&el.closest(".card");
   if(!card||isCardLocked(card)) return null;
   if(el.closest(".card-mark,.card-listen")) return null;
-  if(document.body.classList.contains("game-on")||document.body.classList.contains("printing")) return null;
+  if(document.body.classList.contains("printing")) return null;
+  if(document.body.classList.contains("game-on")&&!document.body.classList.contains("game-play")) return null;
   const modal=document.getElementById("activity-modal");
   if(modal&&modal.classList.contains("show")) return null;
   return card;
@@ -1536,12 +1563,20 @@ function resetGameNet(){
 }
 function closeGame(){
   resetGameNet();
-  document.body.classList.remove("game-on");
+  document.body.classList.remove("game-on","game-play");
   document.getElementById("game-host-block").style.display="none";
   document.getElementById("game-start-now").style.display="none";
   document.getElementById("game-board").classList.remove("show");
   document.getElementById("game-lobby").style.display="flex";
+  document.querySelectorAll(".js-game-turn").forEach(el=>{el.hidden=true;el.textContent="";});
+  document.querySelectorAll(".card").forEach(c=>{
+    c.style.display="";
+    c.classList.remove("game-fixed");
+  });
   if(/#jeu=/i.test(location.hash)) history.replaceState(null,"",location.pathname+location.search);
+  const saved=readSave();
+  if(hasProgress(saved)) restore(saved);
+  else build();
 }
 function lobbyNames(){return (game.lobby||[]).map(p=>p.name).join(", ");}
 function refreshHostWait(){
@@ -1571,6 +1606,7 @@ function dealState(){
     players,
     pile:ids,
     center,
+    centerBy:[null],
     turn:players[0].id,
     lastMsg:"Première carte posée. "+players[0].name+" commence. "+each+" cartes chacun.",
     ended:false,
@@ -1666,6 +1702,8 @@ function applyPlace(playerId,cardId,slot){
   pl.hand.splice(i,1);
   if(cardFits(cardId,slot)){
     st.center.splice(slot,0,cardId);
+    if(!st.centerBy) st.centerBy=st.center.map(()=>null);
+    st.centerBy.splice(slot,0,playerId);
     st.lastMsg=pl.name+" a bien placé une carte.";
     if(!pl.hand.length) st.lastMsg=pl.name+" n’a plus de cartes. On termine le tour…";
   }else{
@@ -1690,69 +1728,16 @@ function renderLobbyInfo(info){
   const n=info.players.length;
   document.getElementById("game-join-wait").textContent="Salle "+info.code+" : "+n+" / "+info.target+" — "+info.players.map(p=>p.name).join(", ")+".";
 }
-function renderGame(){
-  const lobby=document.getElementById("game-lobby");
-  const board=document.getElementById("game-board");
-  if(!game.state){
-    lobby.style.display="flex";
-    board.classList.remove("show");
-    return;
+function slotForDate(date){
+  const center=game.state.center;
+  for(let i=0;i<center.length;i++){
+    if(date<=evDate(center[i])) return i;
   }
-  lobby.style.display="none";
-  board.classList.add("show");
-  document.getElementById("game-code-live").textContent=game.code?"Code "+game.code:"";
-  const current=game.state.players.find(p=>p.id===game.state.turn);
-  const wait=game.state.ended?"":(isMyTurn()?" À toi de jouer.":" Tour de "+(current?current.name:"…")+".");
-  document.getElementById("game-status").textContent=game.state.lastMsg+wait;
-  const endEl=document.getElementById("game-end");
-  if(game.state.ended){
-    endEl.classList.add("show");
-    endEl.innerHTML="<strong>"+endSpeech()+"</strong>";
-  }else{
-    endEl.classList.remove("show");
-    endEl.textContent="";
-    game.endLine="";
-  }
-  const row=document.getElementById("game-row");
-  row.innerHTML="";
-  const n=game.state.center.length;
-  for(let s=0;s<=n;s++){
-    const slot=document.createElement("div");
-    slot.className="game-slot"+(isMyTurn()&&game.selected?" on":"");
-    if(isMyTurn()&&game.selected){
-      const si=s;
-      slot.onclick=()=>tryPlace(si);
-    }
-    row.appendChild(slot);
-    if(s<n) row.appendChild(gcard(game.state.center[s],true,false));
-  }
-  const mine=document.getElementById("game-mine");
-  mine.innerHTML="";
-  const self=me();
-  (self?self.hand:[]).forEach(id=>mine.appendChild(gcard(id,false,true)));
-  const opps=document.getElementById("game-opps");
-  opps.innerHTML="";
-  game.state.players.filter(p=>p.id!==game.myId).forEach(p=>{
-    const box=document.createElement("div");
-    box.className="game-hand";
-    const h=document.createElement("h3");
-    h.textContent=p.name+" · "+p.hand.length+" carte"+(p.hand.length>1?"s":"");
-    box.appendChild(h);
-    const rowH=document.createElement("div");
-    rowH.className="game-mine";
-    p.hand.forEach(()=>{
-      const b=document.createElement("div");
-      b.className="gback";
-      rowH.appendChild(b);
-    });
-    box.appendChild(rowH);
-    opps.appendChild(box);
-  });
+  return center.length;
 }
-function tryPlace(slot){
-  if(!game.selected||!isMyTurn()) return;
-  const cardId=game.selected;
-  game.selected=null;
+function tryPlaceGame(cardId,slot){
+  if(!isMyTurn()||game.state.ended) return;
+  if(myHand().indexOf(cardId)<0) return;
   if(game.role==="host"){
     applyPlace(game.myId,cardId,slot);
     sendState();
@@ -1760,6 +1745,76 @@ function tryPlace(slot){
   }else if(game.conn&&game.conn.open){
     game.conn.send({type:"place",cardId,slot});
   }
+}
+function updateGameTurn(){
+  const st=game.state;
+  let text="",cls="game-turn js-game-turn";
+  if(!st) text="";
+  else if(st.ended) text=endSpeech()||st.lastMsg;
+  else if(isMyTurn()){text="À vous de jouer";cls+=" mine";}
+  else{
+    const current=st.players.find(p=>p.id===st.turn);
+    text=st.players.length>2?("Tour de "+(current?current.name:"l’adversaire")):"Tour de l’adversaire";
+    cls+=" wait";
+  }
+  document.querySelectorAll(".js-game-turn").forEach(el=>{
+    el.className=cls;
+    el.textContent=text;
+    el.hidden=!text;
+  });
+}
+function syncGameBoard(){
+  if(!game.state) return;
+  skipSave=true;
+  document.body.classList.remove("phone-all");
+  updateToggleBank();
+  const mine=new Set(myHand());
+  const onTable=new Set(game.state.center);
+  document.querySelectorAll("#deck .card, .drop-zone .card").forEach(c=>{
+    const id=c.dataset.id;
+    c.classList.remove("game-fixed","game-start","game-p0","game-p1","game-p2","game-p3","game-p4","game-p5","placed","correct","wrong","locked","phone-current","phone-selected");
+    if(onTable.has(id)){
+      const drop=document.querySelector('.drop-zone[data-date="'+evDate(id)+'"]');
+      if(drop) drop.appendChild(c);
+      c.classList.add("placed","game-fixed");
+      const idx=game.state.center.indexOf(id);
+      const by=(game.state.centerBy||[])[idx];
+      if(!by) c.classList.add("game-start");
+      else{
+        const pi=game.state.players.findIndex(p=>p.id===by);
+        c.classList.add("game-p"+(pi<0?0:pi));
+      }
+      c.draggable=false;
+      c.style.display="";
+    }else if(mine.has(id)){
+      deck.appendChild(c);
+      c.draggable=Boolean(isMyTurn()&&!game.state.ended);
+      c.style.display="";
+    }else{
+      deck.appendChild(c);
+      c.style.display="none";
+      c.draggable=false;
+    }
+  });
+  selectedCardId=null;
+  updatePhoneDeck();
+  skipSave=false;
+}
+function renderGame(){
+  const lobby=document.getElementById("game-lobby");
+  const board=document.getElementById("game-board");
+  if(!game.state){
+    document.body.classList.remove("game-play");
+    lobby.style.display="flex";
+    board.classList.remove("show");
+    return;
+  }
+  document.body.classList.add("game-on","game-play");
+  lobby.style.display="none";
+  board.classList.remove("show");
+  updateGameTurn();
+  syncGameBoard();
+  syncPhone();
 }
 function hostAddConn(conn){
   conn.on("open",()=>{
@@ -1859,6 +1914,7 @@ function copyText(text,btn){
 }
 document.getElementById("openGame").onclick=openGameLobby;
 document.getElementById("game-close").onclick=closeGame;
+document.getElementById("game-quit-play").onclick=closeGame;
 document.getElementById("game-create").onclick=startHost;
 document.getElementById("game-start-now").onclick=beginDeal;
 document.getElementById("game-join").onclick=()=>startGuest(document.getElementById("game-join-code").value);
