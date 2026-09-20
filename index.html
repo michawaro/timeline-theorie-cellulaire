@@ -260,16 +260,20 @@ body.phone .tl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;flex:1;min-
 body.phone .tl-inner{min-width:0;width:max-content;flex:1}
 body.phone .tl-slots{flex:1}
 body.phone .tl-col,body.phone .tl-tick-col,body.phone .tl-date-col{
-  flex:0 0 168px;min-width:168px;max-width:168px
+  flex:0 0 112px;min-width:112px;max-width:112px
 }
 body.phone .tl-date{font-size:.5rem}
 body.phone .tl-label{margin-bottom:4px;gap:8px;padding:0 6px}
 body.phone .tl-label>svg,body.phone .tl-caption{display:none}
 body.phone .drop-zone{min-height:0;padding:0;gap:0;align-items:stretch;justify-content:stretch;border-radius:0}
-body.phone .drop-zone .card{width:100%;max-width:none;flex:1 1 auto;height:100%;margin:0}
+body.phone .drop-zone .card,body.phone #phone-park .card{
+  width:100%!important;max-width:none!important;flex:1 1 auto;height:100%;margin:0
+}
+body.phone .drop-zone .card img,body.phone #phone-park .card img{
+  width:100%;height:100%;object-fit:cover;object-position:center
+}
 body.phone .drop-zone .card-top{display:none}
 body.phone #phone-park{outline:2px dashed var(--gold);background:#fff8e8}
-body.phone #phone-park .card{width:100%;max-width:none;flex:1 1 auto}
 body.phone .drop-zone.phone-target:not(#phone-park){background:#e8f0fb;border-color:var(--navy2)}
 body.phone .tl-date-col{cursor:pointer;padding:4px 0 2px}
 body.phone .phone-park .tl-date{color:var(--gold)}
@@ -320,7 +324,7 @@ body.game-on .game-overlay{display:flex}
   .game-status,.game-end{margin:0 8px}
   .game-center{padding:0;border-radius:0;flex:1;min-height:0}
   .game-row{align-items:stretch;gap:4px;min-height:0;height:100%}
-  .gcard{width:168px;height:100%;display:flex;flex-direction:column;margin:0}
+  .gcard{width:112px;height:100%;display:flex;flex-direction:column;margin:0}
   .gcard img{flex:1 1 auto;height:auto;min-height:0;object-fit:contain}
   .game-hands{padding:0 8px}
   .game-mine{gap:4px}
