@@ -82,7 +82,11 @@ body.phone .card img{-webkit-touch-callout:none;-webkit-user-drag:none;pointer-e
       0 18px 44px rgba(220,38,38,.35)!important
   }
 }
-.card.dragging,.card.dragging:hover{opacity:.4;transform:scale(.95);z-index:auto}
+.card.grabbing,.card.grabbing:hover,
+.card.dragging,.card.dragging:hover{
+  transform:none!important;z-index:auto;box-shadow:0 8px 18px rgba(26,53,102,.22)
+}
+.card.dragging,.card.dragging:hover{opacity:.35}
 .card-top{color:#fff;font-size:.58rem;font-weight:600;letter-spacing:.4px;
   text-transform:uppercase;padding:5px 6px;text-align:center;min-height:26px;
   display:flex;align-items:center;justify-content:center;line-height:1.25;background:var(--navy)}
@@ -675,15 +679,31 @@ function makeCard(e){
   el.draggable=true;
   el.dataset.id=e.id;
   el.innerHTML=`<div class="card-top">Carte</div><img src="${e.img}" alt="${e.label}" draggable="false"><div class="card-body"><div class="card-name">${shortLabel(e.label)}</div></div><button class="card-listen" type="button" aria-label="Écouter la description de la carte" title="Écouter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18 6a8 8 0 0 1 0 12"/></svg></button>`;
+  el.addEventListener("pointerdown",ev=>{
+    if(ev.pointerType==="mouse") el.classList.add("grabbing");
+  });
+  el.addEventListener("pointerup",()=>el.classList.remove("grabbing"));
+  el.addEventListener("pointercancel",()=>el.classList.remove("grabbing"));
   el.addEventListener("dragstart",ev=>{
     if(isCardLocked(el)){ev.preventDefault();return;}
     if(ev.target.closest && ev.target.closest(".card-mark, .card-listen")) return;
     dragMark=null;dragMarkFrom=null;
-    dragId=e.id;el.classList.add("dragging");
+    dragId=e.id;
+    el.classList.add("dragging","grabbing");
     ev.dataTransfer.effectAllowed="move";
     ev.dataTransfer.setData("text/plain",e.id);
+    const ghost=el.cloneNode(true);
+    ghost.classList.remove("dragging","grabbing","phone-current","phone-selected");
+    ghost.style.cssText="position:absolute;left:-2000px;top:0;transform:none;opacity:1;margin:0;pointer-events:none;width:"+el.offsetWidth+"px";
+    document.body.appendChild(ghost);
+    const r=el.getBoundingClientRect();
+    ev.dataTransfer.setDragImage(ghost,Math.max(0,ev.clientX-r.left),Math.max(0,ev.clientY-r.top));
+    el._dragGhost=ghost;
   });
-  el.addEventListener("dragend",()=>el.classList.remove("dragging"));
+  el.addEventListener("dragend",()=>{
+    el.classList.remove("dragging","grabbing");
+    if(el._dragGhost){el._dragGhost.remove();el._dragGhost=null;}
+  });
   el.addEventListener("dragover",ev=>{
     const n=ev.dataTransfer.getData("text/plain")||dragMark;
     if(!el.classList.contains("markable")||!["1","2","3"].includes(String(n||""))) return;
