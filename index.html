@@ -48,12 +48,13 @@ main{padding:12px 18px 8px;width:100%;max-width:none;flex:1;display:flex;flex-di
 .card{
   width:118px;border-radius:var(--radius);overflow:visible;cursor:grab;
   transition:transform .2s ease,box-shadow .2s ease,outline .2s;user-select:none;
-  -webkit-user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none;
+  -webkit-user-select:none;
   position:relative;flex-shrink:0;border:2px solid var(--navy);background:#fff;
   transform-origin:center center
 }
-body.phone .card{touch-action:none}
-.card img{-webkit-touch-callout:none;-webkit-user-drag:none;pointer-events:none;user-select:none}
+body.phone .card{touch-action:none;-webkit-touch-callout:none;-webkit-user-drag:none}
+.card img{user-select:none}
+body.phone .card img{-webkit-touch-callout:none;-webkit-user-drag:none;pointer-events:none}
 @media(hover:hover) and (pointer:fine){
   .card:hover{
     transform:scale(2.9);z-index:60;
@@ -678,7 +679,9 @@ function makeCard(e){
     if(isCardLocked(el)){ev.preventDefault();return;}
     if(ev.target.closest && ev.target.closest(".card-mark, .card-listen")) return;
     dragMark=null;dragMarkFrom=null;
-    dragId=e.id;el.classList.add("dragging");ev.dataTransfer.setData("text/plain",e.id);
+    dragId=e.id;el.classList.add("dragging");
+    ev.dataTransfer.effectAllowed="move";
+    ev.dataTransfer.setData("text/plain",e.id);
   });
   el.addEventListener("dragend",()=>el.classList.remove("dragging"));
   el.addEventListener("dragover",ev=>{
