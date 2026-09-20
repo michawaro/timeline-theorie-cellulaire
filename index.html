@@ -221,7 +221,10 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
 .card-listen svg{width:12px;height:12px;display:block;margin:auto}
 body.audio-desc .card-listen{display:grid;place-items:center}
 body.audio-desc .card{cursor:pointer}
-.card.drag-ghost{position:fixed;left:0;top:0;z-index:200;pointer-events:none;opacity:.92;margin:0;box-shadow:0 10px 24px rgba(26,53,102,.28)}
+body.audio-desc .tl-date-col{cursor:pointer}
+.card.drag-ghost{position:fixed;left:0;top:0;z-index:200;pointer-events:none;margin:0;
+  box-shadow:0 14px 28px rgba(26,53,102,.38);will-change:transform}
+.card.ptr-hold{visibility:hidden}
 .card.correct,.card.locked{cursor:default}
 .print-copy .card-listen{display:none!important}
 .hint-count{background:#fff;border:1.5px solid #c5d0e0;color:var(--navy);padding:10px 16px;border-radius:8px;
@@ -614,16 +617,36 @@ function shortLabel(label){
   const part=String(label).split("—")[0].split(" - ")[0].trim();
   return part.length>28?part.slice(0,26)+"…":part;
 }
-function speakCard(e){
-  if(!e||!window.speechSynthesis) return;
+function speakText(text){
+  if(!text||!window.speechSynthesis) return;
   speechSynthesis.cancel();
-  const text="Carte. "+String(e.label).replace(/\s*[—–-]\s*/g,". ");
   const u=new SpeechSynthesisUtterance(text);
   u.lang="fr-FR";
   u.rate=0.92;
   const fr=speechSynthesis.getVoices().find(v=>String(v.lang).toLowerCase().startsWith("fr"));
   if(fr) u.voice=fr;
   speechSynthesis.speak(u);
+}
+function speakCard(e){
+  if(!e) return;
+  speakText("Carte. "+String(e.label).replace(/\s*[—–-]\s*/g,". "));
+}
+function speakDate(dateStr){
+  if(dateStr==="park"){
+    speakText("Emplacement de la carte à placer.");
+    return;
+  }
+  const d=Number(dateStr);
+  if(!Number.isFinite(d)) return;
+  const drop=document.querySelector(`.drop-zone[data-date="${dateStr}"]`);
+  const labels=[...(drop?drop.querySelectorAll(".card"):[])].map(c=>{
+    const ev=events.find(x=>x.id===c.dataset.id);
+    return ev?String(ev.label).replace(/\s*[—–-]\s*/g,". "):"";
+  }).filter(Boolean);
+  let text="Date. "+labelDate(d)+".";
+  if(labels.length) text+=" "+labels.length+" carte"+(labels.length>1?"s":"")+" ici. "+labels.join(". ");
+  else text+=" Aucune carte à cette date.";
+  speakText(text);
 }
 if(window.speechSynthesis) speechSynthesis.addEventListener("voiceschanged",()=>{});
 function isCardLocked(card){return Boolean(card&&card.classList.contains("correct"));}
@@ -817,6 +840,10 @@ function wireDrops(){
   });
   document.querySelectorAll(".tl-date-col").forEach(col=>{
     col.addEventListener("click",()=>{
+      if(document.body.classList.contains("audio-desc")){
+        speakDate(col.dataset.date);
+        return;
+      }
       if(!isPhoneUI()||col.dataset.date==="park") return;
       const drop=document.querySelector(`.drop-zone[data-date="${col.dataset.date}"]`);
       const id=phonePlaceId();
@@ -1276,40 +1303,68 @@ document.addEventListener("pointerdown",e=>{
   const card=cardAllowsDrag(e.target);
   if(!card) return;
   if(e.pointerType==="touch"||e.pointerType==="pen") e.preventDefault();
-  ptrDrag={id:card.dataset.id,card,x:e.clientX,y:e.clientY,started:false,pid:e.pointerId,ghost:null};
+  const box=card.getBoundingClientRect();
+  ptrDrag={id:card.dataset.id,card,x:e.clientX,y:e.clientY,started:false,pid:e.pointerId,ghost:null,
+    originX:box.left,originY:box.top,w:box.width,h:box.height,offX:e.clientX-box.left};
   try{card.setPointerCapture(e.pointerId);}catch(err){}
 },true);
+function railRect(){
+  const slots=document.getElementById("tl-slots");
+  return (slots||document.querySelector(".tl-wrap")).getBoundingClientRect();
+}
+function ghostLeft(clientX){
+  const rail=railRect();
+  let x=clientX-ptrDrag.offX;
+  return Math.max(rail.left,Math.min(rail.right-ptrDrag.w,x));
+}
+function moveGhost(clientX){
+  if(!ptrDrag||!ptrDrag.ghost) return;
+  const x=ghostLeft(clientX);
+  const dx=x-ptrDrag.originX;
+  ptrDrag.ghost.style.transform="translate("+dx+"px,-8px)";
+  const wrap=document.querySelector(".tl-wrap");
+  const rail=railRect();
+  if(wrap){
+    if(clientX>rail.right-36) wrap.scrollLeft+=14;
+    else if(clientX<rail.left+36) wrap.scrollLeft-=14;
+  }
+  document.querySelectorAll(".drop-zone").forEach(z=>z.classList.remove("drag-over"));
+  const over=dropFromPoint(x+ptrDrag.w/2,ptrDrag.originY+ptrDrag.h/2);
+  if(over&&over!==deck) over.classList.add("drag-over");
+}
+function clearPtrDrag(info){
+  if(info&&info.ghost) info.ghost.remove();
+  if(info&&info.card) info.card.classList.remove("ptr-hold","dragging");
+  document.querySelectorAll(".drop-zone").forEach(z=>z.classList.remove("drag-over"));
+}
 document.addEventListener("pointermove",e=>{
   if(!ptrDrag||e.pointerId!==ptrDrag.pid) return;
-  const dx=e.clientX-ptrDrag.x,dy=e.clientY-ptrDrag.y;
+  const dx=e.clientX-ptrDrag.x;
   if(!ptrDrag.started){
-    if(dx*dx+dy*dy<16) return;
+    if(Math.abs(dx)<4) return;
     ptrDrag.started=true;
     const g=ptrDrag.card.cloneNode(true);
     g.classList.add("drag-ghost");
-    g.style.width=ptrDrag.card.offsetWidth+"px";
+    g.style.left=ptrDrag.originX+"px";
+    g.style.top=ptrDrag.originY+"px";
+    g.style.width=ptrDrag.w+"px";
+    g.style.height=ptrDrag.h+"px";
     document.body.appendChild(g);
     ptrDrag.ghost=g;
-    ptrDrag.card.classList.add("dragging");
-    try{ptrDrag.card.setPointerCapture(e.pointerId);}catch(err){}
+    ptrDrag.card.classList.add("ptr-hold");
   }
   e.preventDefault();
-  if(ptrDrag.ghost){
-    ptrDrag.ghost.style.transform="translate("+(e.clientX-ptrDrag.card.offsetWidth/2)+"px,"+(e.clientY-36)+"px)";
-  }
-  document.querySelectorAll(".drop-zone").forEach(z=>z.classList.remove("drag-over"));
-  const over=dropFromPoint(e.clientX,e.clientY);
-  if(over&&over!==deck) over.classList.add("drag-over");
+  moveGhost(e.clientX);
 },{passive:false});
 document.addEventListener("pointerup",e=>{
   if(!ptrDrag||e.pointerId!==ptrDrag.pid) return;
   const info=ptrDrag;
+  const x=info.started?ghostLeft(e.clientX):e.clientX;
+  const y=info.originY+info.h/2;
   ptrDrag=null;
-  if(info.ghost) info.ghost.remove();
-  info.card.classList.remove("dragging");
-  document.querySelectorAll(".drop-zone").forEach(z=>z.classList.remove("drag-over"));
+  clearPtrDrag(info);
   if(!info.started) return;
-  const over=dropFromPoint(e.clientX,e.clientY);
+  const over=dropFromPoint(x+info.w/2,y);
   if(over===deck){
     const from=cardZone(info.card);
     deck.appendChild(info.card);
@@ -1322,11 +1377,9 @@ document.addEventListener("pointerup",e=>{
   }else if(over) place(info.id,over);
 },true);
 document.addEventListener("pointercancel",()=>{
-  if(!ptrDrag) return;
-  if(ptrDrag.ghost) ptrDrag.ghost.remove();
-  ptrDrag.card.classList.remove("dragging");
-  document.querySelectorAll(".drop-zone").forEach(z=>z.classList.remove("drag-over"));
+  const info=ptrDrag;
   ptrDrag=null;
+  clearPtrDrag(info);
 });
 window.addEventListener("resize",syncPhone);
 window.addEventListener("orientationchange",syncPhone);
