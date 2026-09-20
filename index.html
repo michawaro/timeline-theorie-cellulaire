@@ -310,9 +310,14 @@ body.game-play .game-overlay{display:none!important}
 .game-turn{display:none;font-size:.72rem;font-weight:700;color:var(--navy);background:#fff8e8;border:1px solid var(--gold);border-radius:999px;padding:3px 10px;line-height:1.2;max-width:16em}
 body.game-play .game-turn{display:inline-flex}
 .game-turn.wait{background:#f0f3f8;border-color:#c5d0e0;color:var(--muted)}
-body.game-play .tip,body.game-play #check,body.game-play #shuffle,body.game-play #hint,body.game-play #reset,body.game-play #printTl,body.game-play #openActivity,body.game-play #openGame,body.game-play .score,body.game-play .hint-count,body.game-play .phone-hint,body.game-play #toggleBank,body.game-play .js-undo,body.game-play .js-redo{display:none!important}
+body.game-play .tip,body.game-play #check,body.game-play #shuffle,body.game-play #hint,body.game-play #reset,body.game-play #printTl,body.game-play #openActivity,body.game-play #openGame,body.game-play .score,body.game-play .hint-count,body.game-play .phone-hint,body.game-play #toggleBank{display:none!important}
+body.game-play .phone-nav{display:flex!important}
+body.game-play:not(.phone-all) .bank-wrap{display:none!important}
 body.phone.game-play .bank-wrap{display:none!important}
 body.game-play #game-quit-play{display:inline-flex!important}
+.card.game-hidden{display:none!important}
+.js-validate{display:none}
+body.game-play .js-validate{display:inline-flex!important}
 header .game-turn{color:#fff;background:rgba(255,248,232,.18);border-color:var(--gold)}
 body.phone.game-play header .game-turn{display:none!important}
 .card.game-start{box-shadow:0 0 0 3px #64748b}
@@ -524,6 +529,7 @@ body.phone.game-play header .game-turn{display:none!important}
         <button class="btn btn-secondary" id="cardNext" type="button" aria-label="Carte suivante">▶</button>
         <button class="btn btn-secondary btn-icon js-undo" type="button" disabled aria-label="Annuler" title="Annuler (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
         <button class="btn btn-secondary btn-icon js-redo" type="button" disabled aria-label="Rétablir" title="Rétablir (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14 20 9l-5-5"/><path d="M20 9H9a6 6 0 0 0 0 12h3"/></svg></button>
+        <button class="btn btn-primary btn-icon js-validate" type="button" disabled aria-label="Valider" title="Valider le placement"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></button>
         <span class="game-turn js-game-turn" hidden></span>
         <span class="phone-hint">Glisse la carte ou touche une date</span>
         <button class="btn btn-secondary" id="toggleBank" type="button">Toutes les cartes</button>
@@ -542,6 +548,7 @@ body.phone.game-play header .game-turn{display:none!important}
   <div class="controls">
     <button class="btn btn-secondary btn-icon js-undo" type="button" disabled aria-label="Annuler" title="Annuler (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
     <button class="btn btn-secondary btn-icon js-redo" type="button" disabled aria-label="Rétablir" title="Rétablir (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14 20 9l-5-5"/><path d="M20 9H9a6 6 0 0 0 0 12h3"/></svg></button>
+    <button class="btn btn-primary btn-icon js-validate" type="button" disabled aria-label="Valider" title="Valider le placement" style="display:none"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></button>
     <button class="btn btn-secondary" id="game-quit-play" type="button" style="display:none">Quitter le jeu</button>
     <button class="btn btn-primary" id="check">Vérifier mes réponses</button>
     <button class="btn btn-secondary" id="shuffle">Mélanger</button>
@@ -896,10 +903,11 @@ function wireDrops(){
 }
 function place(id,drop,record){
   if(document.body.classList.contains("game-play")&&game.state){
-    if(!drop||drop.dataset.date==="park") return;
-    if(!isMyTurn()||game.state.ended) return;
-    if(myHand().indexOf(id)<0) return;
-    tryPlaceGame(id,slotForDate(Number(drop.dataset.date)));
+    if(!drop||drop.dataset.date==="park"){
+      if(drop&&drop.dataset.date==="park") previewGamePlace(id,"park");
+      return;
+    }
+    previewGamePlace(id,drop.dataset.date);
     return;
   }
   const card=document.querySelector(`.card[data-id="${id}"]`);
@@ -941,11 +949,12 @@ deck.addEventListener("drop",e=>{
     updatePhoneDeck();
   }
 });
-function isPhoneUI(){return document.body.classList.contains("phone")}
+function isPhoneUI(){return document.body.classList.contains("phone")||document.body.classList.contains("game-play")}
 function unplacedCards(){
-  return [...document.querySelectorAll("#deck .card, #phone-park .card")].filter(c=>c.style.display!=="none");
+  return [...document.querySelectorAll("#deck .card, #phone-park .card")].filter(c=>c.style.display!=="none"&&!c.classList.contains("game-hidden"));
 }
 function phonePlaceId(){
+  if(document.body.classList.contains("game-play")&&gameDraft) return gameDraft.id;
   if(selectedCardId){
     const sel=document.querySelector(`.card[data-id="${selectedCardId}"]`);
     if(sel&&!isCardLocked(sel)) return selectedCardId;
@@ -1022,6 +1031,12 @@ function sameZone(a,b){
   return a&&b&&a.type===b.type&&a.date===b.date;
 }
 function updateUndoButtons(){
+  if(document.body.classList.contains("game-play")){
+    document.querySelectorAll(".js-undo").forEach(b=>b.disabled=!gameDraftUndo.length);
+    document.querySelectorAll(".js-redo").forEach(b=>b.disabled=!gameDraftRedo.length);
+    document.querySelectorAll(".js-validate").forEach(b=>b.disabled=!gameDraft);
+    return;
+  }
   document.querySelectorAll(".js-undo").forEach(b=>b.disabled=!undoStack.length);
   document.querySelectorAll(".js-redo").forEach(b=>b.disabled=!redoStack.length);
 }
@@ -1054,6 +1069,7 @@ function applyZone(id,zone){
   updatePhoneDeck();
 }
 function undoMove(){
+  if(document.body.classList.contains("game-play")){gameUndoDraft();return;}
   const step=undoStack.pop();
   if(!step) return;
   applyZone(step.id,step.from);
@@ -1061,6 +1077,7 @@ function undoMove(){
   updateUndoButtons();
 }
 function redoMove(){
+  if(document.body.classList.contains("game-play")){gameRedoDraft();return;}
   const step=redoStack.pop();
   if(!step) return;
   applyZone(step.id,step.to);
@@ -1071,7 +1088,7 @@ function syncPhone(){
   const coarse=window.matchMedia("(pointer:coarse)").matches;
   const touch=navigator.maxTouchPoints>1;
   const short=Math.min(window.innerWidth,window.innerHeight);
-  const phone=coarse||(touch&&short<=1024)||window.innerWidth<900;
+  const phone=coarse||(touch&&short<=1024)||window.innerWidth<900||document.body.classList.contains("game-play");
   document.body.classList.toggle("phone",phone);
   if(phone) updatePhoneDeck();
   else{
@@ -1323,6 +1340,7 @@ document.getElementById("cardPrev").onclick=()=>cyclePhone(-1);
 document.getElementById("cardNext").onclick=()=>cyclePhone(1);
 document.querySelectorAll(".js-undo").forEach(b=>b.onclick=undoMove);
 document.querySelectorAll(".js-redo").forEach(b=>b.onclick=redoMove);
+document.querySelectorAll(".js-validate").forEach(b=>b.onclick=validateGameDraft);
 document.getElementById("toggleBank").onclick=()=>{
   document.body.classList.toggle("phone-all");
   if(document.body.classList.contains("phone-all")) setPhoneTargets(false);
@@ -1543,6 +1561,7 @@ function emptyGame(){
   return {role:null,code:"",peer:null,conn:null,conns:[],state:null,selected:null,myId:null,seatsTarget:2,lobby:[],endLine:""};
 }
 let game=emptyGame();
+let gameDraft=null,gameDraftUndo=[],gameDraftRedo=[];
 function evById(id){return events.find(e=>e.id===id);}
 function evDate(id){return evById(id).date;}
 function randCode(){
@@ -1621,6 +1640,7 @@ function beginDeal(){
   renderGame();
 }
 function me(){return game.state&&game.state.players.find(p=>p.id===game.myId);}
+function myHand(){const p=me();return p&&p.hand?p.hand.slice():[];}
 function isMyTurn(){return game.state&&!game.state.ended&&game.state.turn===game.myId;}
 function pickLine(list){return list[Math.floor(Math.random()*list.length)];}
 function finishRound(st){
@@ -1735,6 +1755,83 @@ function slotForDate(date){
   }
   return center.length;
 }
+function clearGameDraft(){
+  gameDraft=null;
+  gameDraftUndo=[];
+  gameDraftRedo=[];
+  updateUndoButtons();
+}
+function returnDraftCard(id){
+  const card=document.querySelector(`.card[data-id="${id}"]`);
+  if(!card) return;
+  card.classList.remove("game-pending","placed","game-fixed");
+  deck.appendChild(card);
+  selectedCardId=id;
+}
+function previewGamePlace(id,date){
+  if(!isMyTurn()||game.state.ended) return;
+  if(myHand().indexOf(id)<0) return;
+  const card=document.querySelector(`.card[data-id="${id}"]`);
+  if(!card||card.classList.contains("game-fixed")) return;
+  if(gameDraft&&gameDraft.id!==id){
+    returnDraftCard(gameDraft.id);
+    gameDraftUndo=[];
+    gameDraftRedo=[];
+  }
+  const from=gameDraft&&gameDraft.id===id?gameDraft.date:"park";
+  if(from===date) return;
+  if(date==="park"){
+    returnDraftCard(id);
+    gameDraftUndo.push({id,from,to:"park"});
+    gameDraft=null;
+  }else{
+    const drop=document.querySelector('.drop-zone[data-date="'+date+'"]');
+    if(!drop) return;
+    drop.appendChild(card);
+    card.classList.add("placed","game-pending");
+    card.classList.remove("game-hidden");
+    card.draggable=true;
+    gameDraft={id,date:String(date)};
+    gameDraftUndo.push({id,from,to:String(date)});
+  }
+  gameDraftRedo=[];
+  updateUndoButtons();
+  updatePhoneDeck();
+}
+function applyDraftStep(id,date){
+  const card=document.querySelector(`.card[data-id="${id}"]`);
+  if(!card) return;
+  if(date==="park"){
+    returnDraftCard(id);
+    gameDraft=null;
+  }else{
+    const drop=document.querySelector('.drop-zone[data-date="'+date+'"]');
+    if(!drop) return;
+    drop.appendChild(card);
+    card.classList.add("placed","game-pending");
+    gameDraft={id,date:String(date)};
+  }
+  updatePhoneDeck();
+  updateUndoButtons();
+}
+function gameUndoDraft(){
+  const step=gameDraftUndo.pop();
+  if(!step) return;
+  gameDraftRedo.push(step);
+  applyDraftStep(step.id,step.from);
+}
+function gameRedoDraft(){
+  const step=gameDraftRedo.pop();
+  if(!step) return;
+  gameDraftUndo.push(step);
+  applyDraftStep(step.id,step.to);
+}
+function validateGameDraft(){
+  if(!gameDraft||!isMyTurn()) return;
+  const id=gameDraft.id,date=gameDraft.date;
+  clearGameDraft();
+  tryPlaceGame(id,slotForDate(Number(date)));
+}
 function tryPlaceGame(cardId,slot){
   if(!isMyTurn()||game.state.ended) return;
   if(myHand().indexOf(cardId)<0) return;
@@ -1766,13 +1863,15 @@ function updateGameTurn(){
 function syncGameBoard(){
   if(!game.state) return;
   skipSave=true;
+  clearGameDraft();
   document.body.classList.remove("phone-all");
   updateToggleBank();
   const mine=new Set(myHand());
   const onTable=new Set(game.state.center);
   document.querySelectorAll("#deck .card, .drop-zone .card").forEach(c=>{
     const id=c.dataset.id;
-    c.classList.remove("game-fixed","game-start","game-p0","game-p1","game-p2","game-p3","game-p4","game-p5","placed","correct","wrong","locked","phone-current","phone-selected");
+    c.classList.remove("game-hidden","game-pending","game-fixed","game-start","game-p0","game-p1","game-p2","game-p3","game-p4","game-p5","placed","correct","wrong","locked","phone-current","phone-selected");
+    c.style.display="";
     if(onTable.has(id)){
       const drop=document.querySelector('.drop-zone[data-date="'+evDate(id)+'"]');
       if(drop) drop.appendChild(c);
@@ -1785,14 +1884,12 @@ function syncGameBoard(){
         c.classList.add("game-p"+(pi<0?0:pi));
       }
       c.draggable=false;
-      c.style.display="";
     }else if(mine.has(id)){
       deck.appendChild(c);
       c.draggable=Boolean(isMyTurn()&&!game.state.ended);
-      c.style.display="";
     }else{
       deck.appendChild(c);
-      c.style.display="none";
+      c.classList.add("game-hidden");
       c.draggable=false;
     }
   });
