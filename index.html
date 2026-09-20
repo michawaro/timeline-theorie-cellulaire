@@ -310,6 +310,7 @@ body.game-play .game-overlay{display:none!important}
 .game-turn{display:none;font-size:.72rem;font-weight:700;color:var(--navy);background:#fff8e8;border:1px solid var(--gold);border-radius:999px;padding:3px 10px;line-height:1.2;max-width:16em}
 body.game-play .game-turn{display:inline-flex}
 .game-turn.wait{background:#f0f3f8;border-color:#c5d0e0;color:var(--muted)}
+.game-turn.miss{background:#fdecea;border-color:#d44;color:#9b1c1c}
 body.game-play .tip,body.game-play #check,body.game-play #shuffle,body.game-play #hint,body.game-play #reset,body.game-play #printTl,body.game-play #openActivity,body.game-play #openGame,body.game-play .score,body.game-play .hint-count,body.game-play .phone-hint,body.game-play #toggleBank{display:none!important}
 body.game-play .phone-nav{display:flex!important}
 body.game-play:not(.phone-all) .bank-wrap{display:none!important}
@@ -1724,11 +1725,13 @@ function applyPlace(playerId,cardId,slot){
     st.center.splice(slot,0,cardId);
     if(!st.centerBy) st.centerBy=st.center.map(()=>null);
     st.centerBy.splice(slot,0,playerId);
+    st.lastResult={ok:true,by:playerId};
     st.lastMsg=pl.name+" a bien placé une carte.";
     if(!pl.hand.length) st.lastMsg=pl.name+" n’a plus de cartes. On termine le tour…";
   }else{
     st.pile.push(cardId);
     if(st.pile.length) pl.hand.push(st.pile.shift());
+    st.lastResult={ok:false,by:playerId};
     st.lastMsg=pl.name+" s’est trompé : la carte retourne dans la pioche.";
   }
   const idx=st.players.findIndex(p=>p.id===playerId);
@@ -1797,6 +1800,7 @@ function previewGamePlace(id,date){
   gameDraftRedo=[];
   updateUndoButtons();
   updatePhoneDeck();
+  updateGameTurn();
 }
 function applyDraftStep(id,date){
   const card=document.querySelector(`.card[data-id="${id}"]`);
@@ -1813,6 +1817,7 @@ function applyDraftStep(id,date){
   }
   updatePhoneDeck();
   updateUndoButtons();
+  updateGameTurn();
 }
 function gameUndoDraft(){
   const step=gameDraftUndo.pop();
@@ -1835,12 +1840,16 @@ function validateGameDraft(){
 function tryPlaceGame(cardId,slot){
   if(!isMyTurn()||game.state.ended) return;
   if(myHand().indexOf(cardId)<0) return;
+  game.localError="";
   if(game.role==="host"){
     applyPlace(game.myId,cardId,slot);
     sendState();
     renderGame();
   }else if(game.conn&&game.conn.open){
     game.conn.send({type:"place",cardId,slot});
+  }else{
+    game.localError="Erreur de connexion. Réessaie de valider.";
+    updateGameTurn();
   }
 }
 function updateGameTurn(){
@@ -1848,8 +1857,13 @@ function updateGameTurn(){
   let text="",cls="game-turn js-game-turn";
   if(!st) text="";
   else if(st.ended) text=endSpeech()||st.lastMsg;
-  else if(isMyTurn()){text="À vous de jouer";cls+=" mine";}
-  else{
+  else if(game.localError){text=game.localError;cls+=" miss";}
+  else if(isMyTurn()&&gameDraft){text="Carte placée, cliquer sur « valider »";cls+=" mine";}
+  else if(isMyTurn()){text="Choisis ta carte puis clique un emplacement";cls+=" mine";}
+  else if(st.lastResult&&st.lastResult.ok===false&&st.lastResult.by===game.myId){
+    text="Cette carte était mal placée. Elle retourne dans la pioche.";
+    cls+=" miss";
+  }else{
     const current=st.players.find(p=>p.id===st.turn);
     text=st.players.length>2?("Tour de "+(current?current.name:"l’adversaire")):"Tour de l’adversaire";
     cls+=" wait";
