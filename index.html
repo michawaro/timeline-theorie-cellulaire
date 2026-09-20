@@ -48,9 +48,11 @@ main{padding:12px 18px 8px;width:100%;max-width:none;flex:1;display:flex;flex-di
 .card{
   width:118px;border-radius:var(--radius);overflow:visible;cursor:grab;
   transition:transform .2s ease,box-shadow .2s ease,outline .2s;user-select:none;
+  -webkit-user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none;
   position:relative;flex-shrink:0;border:2px solid var(--navy);background:#fff;
-  transform-origin:center center
+  transform-origin:center center;touch-action:none
 }
+.card img{-webkit-touch-callout:none;-webkit-user-drag:none;pointer-events:none;user-select:none}
 @media(hover:hover) and (pointer:fine){
   .card:hover{
     transform:scale(2.9);z-index:60;
@@ -239,6 +241,9 @@ body.audio-desc .card{cursor:pointer}
   color:#fff;align-items:center;justify-content:center;text-align:center;padding:28px;font-size:1.15rem;line-height:1.45}
 .phone-nav{display:none;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
 .phone-nav .btn{padding:6px 10px;font-size:.75rem}
+.btn-icon{display:inline-flex;align-items:center;justify-content:center;min-width:36px;padding:6px 8px}
+.btn-icon svg{width:17px;height:17px;display:block;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.btn-icon:disabled{opacity:.42}
 .phone-pos{font-size:.75rem;font-weight:700;color:var(--navy);min-width:3.4em;text-align:center}
 .phone-hint{display:none;font-size:.68rem;font-weight:500;color:var(--muted);line-height:1.25;max-width:16em}
 .phone-park{display:none}
@@ -491,9 +496,9 @@ body.game-on .game-overlay{display:flex}
         <button class="btn btn-secondary" id="cardPrev" type="button" aria-label="Carte précédente">◀</button>
         <span class="phone-pos" id="phone-pos">0 / 0</span>
         <button class="btn btn-secondary" id="cardNext" type="button" aria-label="Carte suivante">▶</button>
-        <button class="btn btn-secondary" id="undoMove" type="button" disabled title="Annuler le dernier placement (Ctrl+Z)">Annuler</button>
-        <button class="btn btn-secondary" id="redoMove" type="button" disabled title="Rétablir (Ctrl+Y)">Rétablir</button>
-        <span class="phone-hint">Touche une date pour y placer la carte</span>
+        <button class="btn btn-secondary btn-icon js-undo" type="button" disabled aria-label="Annuler" title="Annuler (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
+        <button class="btn btn-secondary btn-icon js-redo" type="button" disabled aria-label="Rétablir" title="Rétablir (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14 20 9l-5-5"/><path d="M20 9H9a6 6 0 0 0 0 12h3"/></svg></button>
+        <span class="phone-hint">Glisse la carte ou touche une date</span>
         <button class="btn btn-secondary" id="toggleBank" type="button">Toutes les cartes</button>
       </div>
     </div>
@@ -508,6 +513,8 @@ body.game-on .game-overlay{display:flex}
   </div>
 
   <div class="controls">
+    <button class="btn btn-secondary btn-icon js-undo" type="button" disabled aria-label="Annuler" title="Annuler (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
+    <button class="btn btn-secondary btn-icon js-redo" type="button" disabled aria-label="Rétablir" title="Rétablir (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14 20 9l-5-5"/><path d="M20 9H9a6 6 0 0 0 0 12h3"/></svg></button>
     <button class="btn btn-primary" id="check">Vérifier mes réponses</button>
     <button class="btn btn-secondary" id="shuffle">Mélanger</button>
     <button class="btn btn-secondary" id="hint">Indice</button>
@@ -642,7 +649,7 @@ function makeCard(e){
   el.className="card";
   el.draggable=true;
   el.dataset.id=e.id;
-  el.innerHTML=`<div class="card-top">Carte</div><img src="${e.img}" alt="${e.label}"><div class="card-body"><div class="card-name">${shortLabel(e.label)}</div></div><button class="card-listen" type="button" aria-label="Écouter la description de la carte" title="Écouter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18 6a8 8 0 0 1 0 12"/></svg></button>`;
+  el.innerHTML=`<div class="card-top">Carte</div><img src="${e.img}" alt="${e.label}" draggable="false"><div class="card-body"><div class="card-name">${shortLabel(e.label)}</div></div><button class="card-listen" type="button" aria-label="Écouter la description de la carte" title="Écouter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18 6a8 8 0 0 1 0 12"/></svg></button>`;
   el.addEventListener("dragstart",ev=>{
     if(isCardLocked(el)){ev.preventDefault();return;}
     if(ev.target.closest && ev.target.closest(".card-mark, .card-listen")) return;
@@ -938,10 +945,8 @@ function sameZone(a,b){
   return a&&b&&a.type===b.type&&a.date===b.date;
 }
 function updateUndoButtons(){
-  const u=document.getElementById("undoMove");
-  const r=document.getElementById("redoMove");
-  if(u) u.disabled=!undoStack.length;
-  if(r) r.disabled=!redoStack.length;
+  document.querySelectorAll(".js-undo").forEach(b=>b.disabled=!undoStack.length);
+  document.querySelectorAll(".js-redo").forEach(b=>b.disabled=!redoStack.length);
 }
 function clearHistory(){
   undoStack=[];
@@ -1239,8 +1244,8 @@ document.getElementById("activity-modal").addEventListener("click",e=>{
 });
 document.getElementById("cardPrev").onclick=()=>cyclePhone(-1);
 document.getElementById("cardNext").onclick=()=>cyclePhone(1);
-document.getElementById("undoMove").onclick=undoMove;
-document.getElementById("redoMove").onclick=redoMove;
+document.querySelectorAll(".js-undo").forEach(b=>b.onclick=undoMove);
+document.querySelectorAll(".js-redo").forEach(b=>b.onclick=redoMove);
 document.getElementById("toggleBank").onclick=()=>{
   document.body.classList.toggle("phone-all");
   if(document.body.classList.contains("phone-all")) setPhoneTargets(false);
@@ -1248,22 +1253,37 @@ document.getElementById("toggleBank").onclick=()=>{
   updateToggleBank();
 };
 let ptrDrag=null;
+function cardAllowsDrag(el){
+  const card=el&&el.closest&&el.closest(".card");
+  if(!card||isCardLocked(card)) return null;
+  if(el.closest(".card-mark,.card-listen")) return null;
+  if(document.body.classList.contains("game-on")||document.body.classList.contains("printing")) return null;
+  const modal=document.getElementById("activity-modal");
+  if(modal&&modal.classList.contains("show")) return null;
+  return card;
+}
+document.addEventListener("contextmenu",e=>{
+  if(e.target.closest&&e.target.closest(".card")) e.preventDefault();
+});
+document.addEventListener("touchstart",e=>{
+  const card=cardAllowsDrag(e.target);
+  if(!card) return;
+  e.preventDefault();
+},{passive:false});
 document.addEventListener("pointerdown",e=>{
   if(e.button) return;
   if(!(e.pointerType==="touch"||e.pointerType==="pen"||isPhoneUI()||window.matchMedia("(pointer:coarse)").matches)) return;
-  if(document.body.classList.contains("game-on")||document.body.classList.contains("printing")) return;
-  const modal=document.getElementById("activity-modal");
-  if(modal&&modal.classList.contains("show")) return;
-  const card=e.target.closest&&e.target.closest(".card");
-  if(!card||isCardLocked(card)) return;
-  if(e.target.closest(".card-mark,.card-listen")) return;
+  const card=cardAllowsDrag(e.target);
+  if(!card) return;
+  if(e.pointerType==="touch"||e.pointerType==="pen") e.preventDefault();
   ptrDrag={id:card.dataset.id,card,x:e.clientX,y:e.clientY,started:false,pid:e.pointerId,ghost:null};
+  try{card.setPointerCapture(e.pointerId);}catch(err){}
 },true);
 document.addEventListener("pointermove",e=>{
   if(!ptrDrag||e.pointerId!==ptrDrag.pid) return;
   const dx=e.clientX-ptrDrag.x,dy=e.clientY-ptrDrag.y;
   if(!ptrDrag.started){
-    if(dx*dx+dy*dy<81) return;
+    if(dx*dx+dy*dy<16) return;
     ptrDrag.started=true;
     const g=ptrDrag.card.cloneNode(true);
     g.classList.add("drag-ghost");
