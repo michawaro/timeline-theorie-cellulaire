@@ -246,7 +246,8 @@ body.phone header{padding:4px 8px}
 body.phone header p,body.phone header .badge{display:none}
 body.phone header h1{font-size:.95rem}
 body.phone header svg{width:24px;height:24px}
-body.phone main{padding:4px 6px;gap:4px}
+body.phone main{padding:4px 0;gap:4px}
+body.phone header{padding-left:8px;padding-right:8px}
 body.phone:not(.phone-all) .bank-wrap{display:none}
 body.phone.phone-all .bank-wrap{margin-bottom:4px;padding:6px 8px}
 body.phone.phone-all #deck{max-height:36vh;overflow:auto}
@@ -255,26 +256,24 @@ body.phone:not(.phone-all) .phone-park{display:flex}
 body.phone .phone-hint{display:inline}
 body.phone .card-body,body.phone .drop-zone .card-body{display:none}
 body.phone .card.phone-current,body.phone .card.phone-selected{box-shadow:0 0 0 3px rgba(232,160,32,.45)}
-body.phone .tl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0;margin-bottom:4px;padding:6px 6px 4px}
-body.phone .tl-inner{min-width:920px;flex:1}
+body.phone .tl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0;margin-bottom:4px;padding:4px 0 2px}
+body.phone .tl-inner{min-width:0;width:max-content;flex:1}
 body.phone .tl-slots{flex:1}
-body.phone .tl-col,body.phone .tl-tick-col,body.phone .tl-date-col{min-width:48px}
-body.phone .tl-col.phone-park,body.phone .tl-tick-col.phone-park,body.phone .tl-date-col.phone-park{
-  flex:0 0 168px;min-width:168px;max-width:200px
+body.phone .tl-col,body.phone .tl-tick-col,body.phone .tl-date-col{
+  flex:0 0 168px;min-width:168px;max-width:168px
 }
 body.phone .tl-date{font-size:.5rem}
-body.phone .tl-label{margin-bottom:4px;gap:8px}
+body.phone .tl-label{margin-bottom:4px;gap:8px;padding:0 6px}
 body.phone .tl-label>svg,body.phone .tl-caption{display:none}
-body.phone .drop-zone{min-height:0}
-body.phone .drop-zone .card{width:min(100%,72px)}
-body.phone .drop-zone .card-top{min-height:0;padding:2px;font-size:.5rem}
+body.phone .drop-zone{min-height:0;padding:0;gap:0;align-items:stretch;justify-content:stretch;border-radius:0}
+body.phone .drop-zone .card{width:100%;max-width:none;flex:1 1 auto;height:100%;margin:0}
+body.phone .drop-zone .card-top{display:none}
 body.phone #phone-park{outline:2px dashed var(--gold);background:#fff8e8}
 body.phone #phone-park .card{width:100%;max-width:none;flex:1 1 auto}
-body.phone #phone-park .card-top{display:none}
 body.phone .drop-zone.phone-target:not(#phone-park){background:#e8f0fb;border-color:var(--navy2)}
 body.phone .tl-date-col{cursor:pointer;padding:4px 0 2px}
 body.phone .phone-park .tl-date{color:var(--gold)}
-body.phone .controls{gap:6px}
+body.phone .controls{gap:6px;padding:0 6px}
 body.phone .controls .btn{padding:6px 9px;font-size:.7rem}
 body.phone .hint-count,body.phone .score{padding:6px 9px;font-size:.7rem;margin-left:0}
 .print-copy .phone-park{display:none!important}
@@ -313,6 +312,19 @@ body.game-on .game-overlay{display:flex}
 .game-seat-pick .btn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .game-opps{display:flex;flex-wrap:wrap;gap:10px;flex:1;min-width:240px}
 .game-opps .game-hand{min-width:160px}
+.game-end{display:none;background:#fff8e8;border:2px solid var(--gold);border-radius:12px;padding:12px 14px;color:var(--navy);line-height:1.45;font-size:1rem}
+.game-end.show{display:block}
+.game-end strong{font-size:1.05rem}
+@media(pointer:coarse){
+  .game-board{padding:8px 0 8px;gap:8px}
+  .game-status,.game-end{margin:0 8px}
+  .game-center{padding:0;border-radius:0;flex:1;min-height:0}
+  .game-row{align-items:stretch;gap:4px;min-height:0;height:100%}
+  .gcard{width:168px;height:100%;display:flex;flex-direction:column;margin:0}
+  .gcard img{flex:1 1 auto;height:auto;min-height:0;object-fit:contain}
+  .game-hands{padding:0 8px}
+  .game-mine{gap:4px}
+}
 .resume-modal{
   display:none;position:fixed;inset:0;z-index:80;background:rgba(16,28,52,.55);
   align-items:center;justify-content:center;padding:20px
@@ -426,6 +438,7 @@ body.game-on .game-overlay{display:flex}
   </div>
   <div class="game-board" id="game-board">
     <div class="game-status" id="game-status"></div>
+    <div class="game-end" id="game-end"></div>
     <div class="game-center"><div class="game-row" id="game-row"></div></div>
     <div class="game-hands">
       <div class="game-hand">
@@ -1208,7 +1221,7 @@ function printTimeline(){
 const PEER_PREFIX="t1a-cell-tl-";
 const CODE_CHARS="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function emptyGame(){
-  return {role:null,code:"",peer:null,conn:null,conns:[],state:null,selected:null,myId:null,seatsTarget:2,lobby:[]};
+  return {role:null,code:"",peer:null,conn:null,conns:[],state:null,selected:null,myId:null,seatsTarget:2,lobby:[],endLine:""};
 }
 let game=emptyGame();
 function evById(id){return events.find(e=>e.id===id);}
@@ -1267,8 +1280,10 @@ function dealState(){
     pile:ids,
     center,
     turn:players[0].id,
-    winner:null,
-    lastMsg:"Première carte posée. "+players[0].name+" commence. "+each+" cartes chacun."
+    lastMsg:"Première carte posée. "+players[0].name+" commence. "+each+" cartes chacun.",
+    ended:false,
+    winners:[],
+    roundStart:players[0].id
   };
 }
 function beginDeal(){
@@ -1278,7 +1293,71 @@ function beginDeal(){
   renderGame();
 }
 function me(){return game.state&&game.state.players.find(p=>p.id===game.myId);}
-function isMyTurn(){return game.state&&!game.state.winner&&game.state.turn===game.myId;}
+function isMyTurn(){return game.state&&!game.state.ended&&game.state.turn===game.myId;}
+function pickLine(list){return list[Math.floor(Math.random()*list.length)];}
+function finishRound(st){
+  const min=Math.min.apply(null,st.players.map(p=>p.hand.length));
+  if(min>0) return;
+  st.ended=true;
+  st.winners=st.players.filter(p=>p.hand.length===min).map(p=>p.id);
+  const names=st.players.filter(p=>st.winners.indexOf(p.id)>=0).map(p=>p.name);
+  st.lastMsg=st.winners.length>1
+    ?"Fin du tour : égalité entre "+names.join(" et ")+"."
+    :"Fin du tour : "+names[0]+" l’emporte.";
+}
+function endSpeech(){
+  const st=game.state;
+  if(!st||!st.ended) return "";
+  if(game.endLine) return game.endLine;
+  const self=me();
+  const counts=st.players.map(p=>p.hand.length);
+  const min=Math.min.apply(null,counts);
+  const my=self?self.hand.length:min;
+  const others=st.players.filter(p=>p.id!==game.myId).map(p=>p.hand.length);
+  const bestOther=others.length?Math.min.apply(null,others):min;
+  const iWon=st.winners.indexOf(game.myId)>=0;
+  const tied=iWon&&st.winners.length>1;
+  const margin=tied?0:(iWon?bestOther-my:my-min);
+  let line;
+  if(tied){
+    line=pickLine([
+      "Égalité ! Même tempo, même honneur. Bravo à vous.",
+      "Match nul scientifique : personne n’a perdu, tout le monde a avancé. Bravo !",
+      "Bravo ! Vous avez fini main dans la main sur la frise.",
+      "Pile au même instant : l’histoire des cellules vous départage… en vous félicitant tous."
+    ]);
+  }else if(iWon&&margin<=1){
+    line="Ça passe, de justesse… Mais ça passe quand même, bravo !";
+  }else if(iWon&&margin===2){
+    line=pickLine([
+      "Bravo ! Une belle avance, nette sans être écrasante.",
+      "Bien joué : tu as su garder le rythme jusqu’au bout. Bravo !",
+      "Deux cartes d’écart : assez pour sourire, pas assez pour se vanter. Bravo !"
+    ]);
+  }else if(iWon){
+    line=pickLine([
+      "Bravo ! Une victoire propre et sans bavure.",
+      "Les cellules n’ont qu’à bien se tenir : tu as tout aligné. Bravo !",
+      "Maîtrise totale. Virchow applaudirait. Bravo !"
+    ]);
+  }else if(margin<=1){
+    line=pickLine([
+      "Râté pour cette fois, mais c’était tout près. La prochaine sera la bonne.",
+      "Presque ! Une carte de trop, et pourtant quel match.",
+      "Râté pour cette fois, mais tu as fait trembler le vainqueur jusqu’à la dernière carte."
+    ]);
+  }else if(margin===2){
+    line=pickLine([
+      "Râté pour cette fois, mais tu as tenu la distance. Encore une partie ?",
+      "Pas cette fois. L’histoire des cellules attend ta revanche — et elle sera belle.",
+      "Deux cartes d’écart : rien de grave, juste une revanche à prendre."
+    ]);
+  }else{
+    line="Bon, ça ne l’a pas fait pour cette fois, mais on ne peut pas toujours gagner !";
+  }
+  game.endLine=line;
+  return line;
+}
 function cardFits(cardId,slot){
   const d=evDate(cardId);
   const left=slot===0?-Infinity:evDate(game.state.center[slot-1]);
@@ -1287,7 +1366,7 @@ function cardFits(cardId,slot){
 }
 function applyPlace(playerId,cardId,slot){
   const st=game.state;
-  if(!st||st.winner||st.turn!==playerId) return;
+  if(!st||st.ended||st.turn!==playerId) return;
   const pl=st.players.find(p=>p.id===playerId);
   if(!pl) return;
   const i=pl.hand.indexOf(cardId);
@@ -1296,16 +1375,15 @@ function applyPlace(playerId,cardId,slot){
   if(cardFits(cardId,slot)){
     st.center.splice(slot,0,cardId);
     st.lastMsg=pl.name+" a bien placé une carte.";
-    if(!pl.hand.length){st.winner=playerId;st.lastMsg=pl.name+" a gagné !";}
+    if(!pl.hand.length) st.lastMsg=pl.name+" n’a plus de cartes. On termine le tour…";
   }else{
     st.pile.push(cardId);
     if(st.pile.length) pl.hand.push(st.pile.shift());
     st.lastMsg=pl.name+" s’est trompé : la carte retourne dans la pioche.";
   }
-  if(!st.winner){
-    const idx=st.players.findIndex(p=>p.id===playerId);
-    st.turn=st.players[(idx+1)%st.players.length].id;
-  }
+  const idx=st.players.findIndex(p=>p.id===playerId);
+  st.turn=st.players[(idx+1)%st.players.length].id;
+  if(st.turn===st.roundStart) finishRound(st);
 }
 function yearLabel(d){return d<0?(-d)+" av. J.-C.":String(d);}
 function gcard(id,showDate,selectable){
@@ -1332,8 +1410,17 @@ function renderGame(){
   board.classList.add("show");
   document.getElementById("game-code-live").textContent=game.code?"Code "+game.code:"";
   const current=game.state.players.find(p=>p.id===game.state.turn);
-  const wait=game.state.winner?"":(isMyTurn()?" À toi de jouer.":" Tour de "+(current?current.name:"…")+".");
+  const wait=game.state.ended?"":(isMyTurn()?" À toi de jouer.":" Tour de "+(current?current.name:"…")+".");
   document.getElementById("game-status").textContent=game.state.lastMsg+wait;
+  const endEl=document.getElementById("game-end");
+  if(game.state.ended){
+    endEl.classList.add("show");
+    endEl.innerHTML="<strong>"+endSpeech()+"</strong>";
+  }else{
+    endEl.classList.remove("show");
+    endEl.textContent="";
+    game.endLine="";
+  }
   const row=document.getElementById("game-row");
   row.innerHTML="";
   const n=game.state.center.length;
