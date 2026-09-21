@@ -179,7 +179,7 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
 
 .tl-wrap{background:#fff;border-radius:12px;padding:12px 10px 8px;
   box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:10px;overflow:visible;
-  flex:1;display:flex;flex-direction:column;min-height:0}
+  flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
 .tl-label{font-size:.78rem;font-weight:600;color:var(--navy);
   text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;
   display:flex;align-items:center;gap:6px}
@@ -312,9 +312,15 @@ body.game-play .game-turn{display:inline-flex}
 .game-turn.wait{background:#f0f3f8;border-color:#c5d0e0;color:var(--muted)}
 .game-turn.miss{background:#fdecea;border-color:#d44;color:#9b1c1c}
 body.game-play .tip,body.game-play #check,body.game-play #shuffle,body.game-play #hint,body.game-play #reset,body.game-play #printTl,body.game-play #openActivity,body.game-play #openGame,body.game-play .score,body.game-play .hint-count,body.game-play .phone-hint,body.game-play #toggleBank{display:none!important}
-body.game-play .phone-nav{display:flex!important}
-body.game-play:not(.phone-all) .bank-wrap{display:none!important}
 body.phone.game-play .bank-wrap{display:none!important}
+.phone-cycle{display:none;align-items:center;justify-content:center;gap:6px;width:100%;padding:2px 0 6px;flex:0 0 auto}
+body.phone:not(.phone-all) .phone-cycle{display:flex}
+body.phone:not(.phone-all) .phone-cycle .btn{padding:4px 8px;font-size:.72rem}
+.game-opp-mini{display:none;position:absolute;top:8px;right:10px;z-index:25;width:78px;flex-direction:column;align-items:center;gap:4px;padding:6px;background:#fff;border:2px solid var(--navy);border-radius:10px;box-shadow:0 4px 14px rgba(26,53,102,.2)}
+body.game-play .game-opp-mini.show{display:flex}
+.game-opp-mini span{font-size:.58rem;font-weight:700;color:var(--navy);text-align:center;line-height:1.2;text-transform:uppercase;letter-spacing:.3px}
+.game-opp-mini img{width:100%;height:64px;object-fit:contain;background:#f4f4f4;border-radius:6px}
+.card.game-ghost{opacity:.42;pointer-events:none;outline:2px dashed var(--gold);outline-offset:2px}
 body.game-play #game-quit-play{display:inline-flex!important}
 .card.game-hidden{display:none!important}
 .js-validate{display:none}
@@ -538,14 +544,16 @@ body.game-play .drop-zone .card.game-start{z-index:3}
     <div id="deck"></div>
   </div>
 
+  <div class="phone-cycle" id="phone-cycle">
+    <button class="btn btn-secondary" id="cardPrev" type="button" aria-label="Carte précédente">◀</button>
+    <span class="phone-pos" id="phone-pos">0 / 0</span>
+    <button class="btn btn-secondary" id="cardNext" type="button" aria-label="Carte suivante">▶</button>
+  </div>
   <div class="tl-wrap">
     <div class="tl-label">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a3566" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M14 7l5 5-5 5"/></svg>
       <span class="tl-caption">Frise chronologique</span>
       <div class="phone-nav" id="phone-nav">
-        <button class="btn btn-secondary" id="cardPrev" type="button" aria-label="Carte précédente">◀</button>
-        <span class="phone-pos" id="phone-pos">0 / 0</span>
-        <button class="btn btn-secondary" id="cardNext" type="button" aria-label="Carte suivante">▶</button>
         <button class="btn btn-secondary btn-icon js-undo" type="button" disabled aria-label="Annuler" title="Annuler (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
         <button class="btn btn-secondary btn-icon js-redo" type="button" disabled aria-label="Rétablir" title="Rétablir (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14 20 9l-5-5"/><path d="M20 9H9a6 6 0 0 0 0 12h3"/></svg></button>
         <button class="btn btn-primary btn-icon js-validate" type="button" disabled aria-label="Valider" title="Valider le placement"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></button>
@@ -553,6 +561,10 @@ body.game-play .drop-zone .card.game-start{z-index:3}
         <span class="phone-hint">Glisse la carte ou touche une date</span>
         <button class="btn btn-secondary" id="toggleBank" type="button">Toutes les cartes</button>
       </div>
+    </div>
+    <div class="game-opp-mini" id="game-opp-mini" hidden>
+      <span>Carte adverse</span>
+      <img alt="">
     </div>
     <div class="tl-inner">
       <div class="tl-slots" id="tl-slots"></div>
@@ -772,10 +784,19 @@ function makeCard(e){
           selectedCardId=e.id;
           document.querySelectorAll(".card").forEach(c=>c.classList.toggle("phone-selected",c.dataset.id===e.id));
           setPhoneTargets(true);
+          publishIntent();
         }
         return;
       }
       pickPhoneCard(e.id);
+      return;
+    }
+    if(document.body.classList.contains("game-play")&&game.state){
+      if(!el.classList.contains("game-fixed")&&!el.classList.contains("game-hidden")){
+        selectedCardId=e.id;
+        document.querySelectorAll(".card").forEach(c=>c.classList.toggle("phone-selected",c.dataset.id===e.id));
+        publishIntent();
+      }
       return;
     }
     if(document.body.classList.contains("audio-desc")) speakCard(e);
@@ -796,6 +817,8 @@ function drawAxis(){
   park.className="drop-zone";
   park.id="phone-park";
   park.dataset.date="park";
+  const cycle=document.getElementById("phone-cycle");
+  if(cycle) parkCol.appendChild(cycle);
   parkCol.appendChild(park);
   slotsEl.appendChild(parkCol);
   const parkTick=document.createElement("div");
@@ -827,10 +850,15 @@ function drawAxis(){
   });
   wireDrops();
 }
+function parkCycleSafe(){
+  const cycle=document.getElementById("phone-cycle");
+  if(cycle) document.body.appendChild(cycle);
+}
 function build(){
   skipSave=true;
   resetStep2();
   deck.innerHTML="";
+  parkCycleSafe();
   slotsEl.innerHTML="";
   ticksEl.innerHTML="";
   datesEl.innerHTML="";
@@ -850,6 +878,7 @@ function restore(saved){
   skipSave=true;
   resetStep2();
   deck.innerHTML="";
+  parkCycleSafe();
   slotsEl.innerHTML="";
   ticksEl.innerHTML="";
   datesEl.innerHTML="";
@@ -899,7 +928,7 @@ function wireDrops(){
       place(id,drop);
     });
     drop.addEventListener("click",e=>{
-      if(!isPhoneUI()) return;
+      if(!isPhoneUI()&&!document.body.classList.contains("game-play")) return;
       if(drop.dataset.date==="park") return;
       if(e.target.closest && e.target.closest(".card")) return;
       const id=phonePlaceId();
@@ -913,7 +942,7 @@ function wireDrops(){
         speakDate(col.dataset.date);
         return;
       }
-      if(!isPhoneUI()||col.dataset.date==="park") return;
+      if((!isPhoneUI()&&!document.body.classList.contains("game-play"))||col.dataset.date==="park") return;
       const drop=document.querySelector(`.drop-zone[data-date="${col.dataset.date}"]`);
       const id=phonePlaceId();
       if(drop&&id) place(id,drop);
@@ -968,7 +997,7 @@ deck.addEventListener("drop",e=>{
     updatePhoneDeck();
   }
 });
-function isPhoneUI(){return document.body.classList.contains("phone")||document.body.classList.contains("game-play")}
+function isPhoneUI(){return document.body.classList.contains("phone")}
 function unplacedCards(){
   return [...document.querySelectorAll("#deck .card, #phone-park .card")].filter(c=>c.style.display!=="none"&&!c.classList.contains("game-hidden"));
 }
@@ -998,6 +1027,7 @@ function pickPhoneCard(id){
   document.body.classList.remove("phone-all");
   updateToggleBank();
   updatePhoneDeck(id);
+  publishIntent();
 }
 function updatePhoneDeck(preferId){
   const park=document.getElementById("phone-park");
@@ -1107,7 +1137,7 @@ function syncPhone(){
   const coarse=window.matchMedia("(pointer:coarse)").matches;
   const touch=navigator.maxTouchPoints>1;
   const short=Math.min(window.innerWidth,window.innerHeight);
-  const phone=coarse||(touch&&short<=1024)||window.innerWidth<900||document.body.classList.contains("game-play");
+  const phone=coarse||(touch&&short<=1024)||window.innerWidth<900;
   document.body.classList.toggle("phone",phone);
   if(phone) updatePhoneDeck();
   else{
@@ -1643,6 +1673,9 @@ function resetGameNet(){
 function closeGame(){
   resetGameNet();
   document.body.classList.remove("game-on","game-play");
+  const mini=document.getElementById("game-opp-mini");
+  if(mini){mini.hidden=true;mini.classList.remove("show");}
+  document.querySelectorAll(".game-ghost").forEach(el=>el.remove());
   document.getElementById("game-host-block").style.display="none";
   document.getElementById("game-start-now").style.display="none";
   document.getElementById("game-board").classList.remove("show");
@@ -1668,6 +1701,70 @@ function broadcast(msg){
   (game.conns||[]).forEach(c=>{if(c.open) c.send(msg);});
 }
 function sendState(){if(game.state) broadcast({type:"state",state:game.state});}
+function myShownId(){
+  if(selectedCardId&&myHand().indexOf(selectedCardId)>=0) return selectedCardId;
+  const cards=unplacedCards();
+  return cards.length?cards[0].dataset.id:null;
+}
+function publishIntent(){
+  if(skipSave||!game.state||game.state.ended||!game.myId) return;
+  const shown=myShownId();
+  const draft=isMyTurn()&&gameDraft?{by:game.myId,id:gameDraft.id,date:String(gameDraft.date)}:null;
+  if(!game.state.shown) game.state.shown={};
+  game.state.shown[game.myId]=shown;
+  if(isMyTurn()) game.state.draft=draft;
+  if(game.role==="host"){
+    broadcast({type:"intent",shown:game.state.shown,draft:game.state.draft||null});
+    paintRemoteIntent();
+  }else if(game.conn&&game.conn.open){
+    game.conn.send({type:"intent",shown:shown,draft:isMyTurn()?draft:undefined});
+  }
+}
+function applyIntentMsg(fromId,msg){
+  if(!game.state||!msg) return;
+  if(!game.state.shown) game.state.shown={};
+  if(msg.shown&&typeof msg.shown==="object"&&!Array.isArray(msg.shown)){
+    Object.keys(msg.shown).forEach(id=>{game.state.shown[id]=msg.shown[id];});
+  }else if(fromId&&msg.shown){
+    game.state.shown[fromId]=msg.shown;
+  }
+  if(fromId&&fromId===game.state.turn&&"draft" in msg) game.state.draft=msg.draft||null;
+  else if(!fromId&&"draft" in msg) game.state.draft=msg.draft||null;
+  if(game.role==="host") broadcast({type:"intent",shown:game.state.shown,draft:game.state.draft||null});
+  paintRemoteIntent();
+  updateGameTurn();
+}
+function paintRemoteIntent(){
+  document.querySelectorAll(".game-ghost").forEach(el=>el.remove());
+  const mini=document.getElementById("game-opp-mini");
+  const img=mini&&mini.querySelector("img");
+  const st=game.state;
+  if(!st||st.ended||!mini){
+    if(mini){mini.hidden=true;mini.classList.remove("show");}
+    return;
+  }
+  const turnId=st.turn;
+  const shown=st.shown&&st.shown[turnId];
+  const ev=shown&&evById(shown);
+  if(!isMyTurn()&&ev){
+    mini.hidden=false;
+    mini.classList.add("show");
+    if(img) img.src=ev.img;
+  }else{
+    mini.hidden=true;
+    mini.classList.remove("show");
+  }
+  if(!isMyTurn()&&st.draft&&st.draft.by===turnId&&st.draft.id&&st.draft.date&&st.draft.date!=="park"){
+    const drop=document.querySelector('.drop-zone[data-date="'+st.draft.date+'"]');
+    const evd=evById(st.draft.id);
+    if(drop&&evd){
+      const ghost=document.createElement("div");
+      ghost.className="card game-ghost placed";
+      ghost.innerHTML='<div class="card-top">?</div><img alt="" src="'+evd.img+'">';
+      drop.appendChild(ghost);
+    }
+  }
+}
 function sendLobby(){
   broadcast({type:"lobby",code:game.code,target:game.seatsTarget,players:game.lobby.map(p=>({id:p.id,name:p.name}))});
 }
@@ -1690,7 +1787,9 @@ function dealState(){
     lastMsg:"Première carte posée. "+players[0].name+" commence. "+each+" cartes chacun.",
     ended:false,
     winners:[],
-    roundStart:players[0].id
+    roundStart:players[0].id,
+    shown:{},
+    draft:null
   };
 }
 function beginDeal(){
@@ -1805,6 +1904,10 @@ function applyPlace(playerId,cardId,slot,chosenDate){
     st.lastMsg=pl.name+" s’est trompé : la carte retourne à la pioche.";
     if(playerId===game.myId) game.localError=drawn===cardId?"Mauvais emplacement. La pioche est vide : tu récupères la même carte.":"Mauvais emplacement. Tu pioches une autre carte.";
   }
+  st.draft=null;
+  if(!st.shown) st.shown={};
+  if(ok) delete st.shown[playerId];
+  else if(drawn) st.shown[playerId]=drawn;
   const idx=st.players.findIndex(p=>p.id===playerId);
   st.turn=st.players[(idx+1)%st.players.length].id;
   if(st.turn===st.roundStart) finishRound(st);
@@ -1872,6 +1975,7 @@ function previewGamePlace(id,date){
   updateUndoButtons();
   updatePhoneDeck();
   updateGameTurn();
+  publishIntent();
 }
 function applyDraftStep(id,date){
   const card=document.querySelector(`.card[data-id="${id}"]`);
@@ -1889,6 +1993,7 @@ function applyDraftStep(id,date){
   updatePhoneDeck();
   updateUndoButtons();
   updateGameTurn();
+  publishIntent();
 }
 function gameUndoDraft(){
   const step=gameDraftUndo.pop();
@@ -1936,7 +2041,10 @@ function updateGameTurn(){
   else if(game.localError){text=game.localError;cls+=" miss";}
   else if(isMyTurn()&&gameDraft){text="Carte placée, cliquer sur « valider »";cls+=" mine";}
   else if(isMyTurn()){text="Choisis ta carte puis clique un emplacement";cls+=" mine";}
-  else if(st.lastResult&&st.lastResult.ok===false&&st.lastResult.by===game.myId){
+  else if(st.draft&&st.draft.by&&st.draft.by!==game.myId&&st.draft.date&&st.draft.date!=="park"){
+    text="Dans l'attente de validation par joueur adverse";
+    cls+=" wait";
+  }else if(st.lastResult&&st.lastResult.ok===false&&st.lastResult.by===game.myId){
     text="Mauvais emplacement. Tu pioches une autre carte.";
     cls+=" miss";
   }else{
@@ -1954,6 +2062,7 @@ function syncGameBoard(){
   if(!game.state) return;
   skipSave=true;
   clearGameDraft();
+  document.querySelectorAll(".game-ghost").forEach(el=>el.remove());
   document.body.classList.remove("phone-all");
   updateToggleBank();
   const mine=new Set(myHand());
@@ -1989,9 +2098,12 @@ function syncGameBoard(){
     }
   });
   const drawn=game.state.lastResult&&game.state.lastResult.ok===false&&mine.has(game.state.lastResult.drawn)?game.state.lastResult.drawn:null;
-  selectedCardId=drawn||null;
-  updatePhoneDeck(drawn);
+  if(drawn) selectedCardId=drawn;
+  else if(!mine.has(selectedCardId)) selectedCardId=null;
+  updatePhoneDeck(selectedCardId);
   skipSave=false;
+  paintRemoteIntent();
+  publishIntent();
 }
 function renderGame(){
   const lobby=document.getElementById("game-lobby");
@@ -2029,6 +2141,7 @@ function hostAddConn(conn){
       sendState();
       renderGame();
     }
+    if(msg.type==="intent") applyIntentMsg(conn.peer,msg);
   });
   conn.on("close",()=>{
     game.conns=game.conns.filter(c=>c!==conn);
@@ -2085,6 +2198,7 @@ function startGuest(code){
       }
       if(msg.type==="lobby") renderLobbyInfo(msg);
       if(msg.type==="state"){game.state=msg.state;renderGame();}
+      if(msg.type==="intent") applyIntentMsg(null,msg);
     });
     conn.on("open",()=>{
       document.getElementById("game-join-wait").textContent="Connecté, en attente des autres joueurs…";
