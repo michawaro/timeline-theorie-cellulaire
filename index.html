@@ -318,8 +318,9 @@ body.phone.game-play.phone-all .bank-wrap{display:block!important}
 .phone-cycle{display:none;align-items:center;justify-content:center;gap:6px;width:100%;padding:2px 0 6px;flex:0 0 auto}
 body.phone:not(.phone-all) .phone-cycle{display:flex}
 body.phone:not(.phone-all) .phone-cycle .btn{padding:4px 8px;font-size:.72rem}
-.game-opp-mini{display:none;position:absolute;top:8px;right:10px;z-index:25;width:78px;flex-direction:column;align-items:center;gap:4px;padding:6px;background:#fff;border:2px solid var(--navy);border-radius:10px;box-shadow:0 4px 14px rgba(26,53,102,.2)}
+.game-opp-mini{display:none;position:fixed;top:76px;right:16px;z-index:40;width:78px;flex-direction:column;align-items:center;gap:4px;padding:6px;background:#fff;border:2px solid var(--navy);border-radius:10px;box-shadow:0 4px 14px rgba(26,53,102,.2);pointer-events:none}
 body.game-play .game-opp-mini.show{display:flex}
+body.phone .game-opp-mini{top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right))}
 .game-opp-mini span{font-size:.58rem;font-weight:700;color:var(--navy);text-align:center;line-height:1.2;text-transform:uppercase;letter-spacing:.3px}
 .game-opp-mini img{width:100%;height:64px;object-fit:contain;background:#f4f4f4;border-radius:6px}
 .card.game-ghost{opacity:.42;pointer-events:none;outline:2px dashed var(--gold);outline-offset:2px}
@@ -338,6 +339,8 @@ body.phone.game-play header .game-turn{display:none!important}
 .card.game-p5{box-shadow:0 0 0 3px #fff,0 0 0 9px #0d9488,0 0 18px 3px rgba(13,148,136,.5)!important;outline:3px solid #0d9488;outline-offset:2px}
 body.game-play:not(.phone) .card-top,
 body.game-play:not(.phone) .card-body{display:none}
+body.game-play:not(.phone) #deck .card{width:189px}
+body.game-play:not(.phone) #deck .card img{height:192px}
 body.game-play:not(.phone) .drop-zone:not(#phone-park){padding:0;gap:0;justify-content:flex-end}
 body.game-play:not(.phone) .drop-zone:not(#phone-park) .card,
 body.game-play:not(.phone) .drop-zone:not(#phone-park) .card.game-ghost{
@@ -557,6 +560,10 @@ body.game-play .drop-zone .card.game-start{z-index:3}
     <div id="deck"></div>
   </div>
 
+  <div class="game-opp-mini" id="game-opp-mini" hidden>
+    <span>Carte adverse</span>
+    <img alt="">
+  </div>
   <div class="phone-nav" id="phone-nav">
     <button class="btn btn-secondary btn-icon js-undo" type="button" disabled aria-label="Annuler" title="Annuler (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
     <button class="btn btn-secondary btn-icon js-redo" type="button" disabled aria-label="Rétablir" title="Rétablir (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14 20 9l-5-5"/><path d="M20 9H9a6 6 0 0 0 0 12h3"/></svg></button>
@@ -574,10 +581,6 @@ body.game-play .drop-zone .card.game-start{z-index:3}
     <div class="tl-label">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a3566" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M14 7l5 5-5 5"/></svg>
       <span class="tl-caption">Frise chronologique</span>
-    </div>
-    <div class="game-opp-mini" id="game-opp-mini" hidden>
-      <span>Carte adverse</span>
-      <img alt="">
     </div>
     <div class="tl-inner">
       <div class="tl-slots" id="tl-slots"></div>
