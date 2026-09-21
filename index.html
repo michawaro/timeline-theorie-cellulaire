@@ -311,6 +311,8 @@ body.game-play .game-overlay{display:none!important}
 body.game-play .game-turn{display:inline-flex}
 .game-turn.wait{background:#f0f3f8;border-color:#c5d0e0;color:var(--muted)}
 .game-turn.miss{background:#fdecea;border-color:#d44;color:#9b1c1c}
+.game-turn.ready{background:#e8f8ee;border-color:#6bc48a;color:#166534}
+header .game-turn.ready{color:#ecfdf3;background:rgba(143,212,168,.3);border-color:#8fd4a8}
 body.game-play .tip,body.game-play #check,body.game-play #shuffle,body.game-play #hint,body.game-play #reset,body.game-play #printTl,body.game-play #openActivity,body.game-play #openGame,body.game-play .score,body.game-play .hint-count,body.game-play .phone-hint{display:none!important}
 body.game-play:not(.phone) #toggleBank{display:none!important}
 body.phone.game-play:not(.phone-all) .bank-wrap{display:none!important}
@@ -326,7 +328,16 @@ body.phone .game-opp-mini{top:max(8px,env(safe-area-inset-top));right:max(8px,en
 .card.game-ghost{opacity:.42;pointer-events:none;outline:2px dashed var(--gold);outline-offset:2px}
 body.game-play #game-quit-play{display:inline-flex!important}
 .card.game-hidden{display:none!important}
-.js-validate{display:none}
+.js-validate{display:none;background:#8fd4a8;color:#14532d;border:1.5px solid #6bc48a}
+.js-validate:hover:not(:disabled){background:#74c994;transform:translateY(-1px)}
+.js-validate.ready{
+  animation:validatePulse 1.15s ease-in-out infinite;
+  box-shadow:0 0 0 3px #fff,0 0 0 7px #8fd4a8,0 0 18px 4px rgba(109,196,140,.55)
+}
+@keyframes validatePulse{
+  0%,100%{box-shadow:0 0 0 3px #fff,0 0 0 7px #8fd4a8,0 0 14px 3px rgba(109,196,140,.4)}
+  50%{box-shadow:0 0 0 4px #fff,0 0 0 10px #b6ebc8,0 0 24px 6px rgba(109,196,140,.7)}
+}
 body.game-play .js-validate{display:inline-flex!important}
 header .game-turn{color:#fff;background:rgba(255,248,232,.18);border-color:var(--gold)}
 body.phone.game-play header .game-turn{display:none!important}
@@ -1099,7 +1110,11 @@ function updateUndoButtons(){
   if(document.body.classList.contains("game-play")){
     document.querySelectorAll(".js-undo").forEach(b=>b.disabled=!gameDraftUndo.length);
     document.querySelectorAll(".js-redo").forEach(b=>b.disabled=!gameDraftRedo.length);
-    document.querySelectorAll(".js-validate").forEach(b=>b.disabled=!gameDraft);
+    document.querySelectorAll(".js-validate").forEach(b=>{
+      const on=Boolean(gameDraft&&isMyTurn());
+      b.disabled=!on;
+      b.classList.toggle("ready",on);
+    });
     return;
   }
   document.querySelectorAll(".js-undo").forEach(b=>b.disabled=!undoStack.length);
@@ -1570,6 +1585,11 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("keydown",e=>{
   const inField=e.target&&(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA");
+  if(!inField&&(e.key==="Enter"||e.key==="NumpadEnter")&&document.body.classList.contains("game-play")){
+    e.preventDefault();
+    validateGameDraft();
+    return;
+  }
   if(!inField&&(e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==="z"){
     e.preventDefault();
     if(e.shiftKey) redoMove();
@@ -2078,7 +2098,7 @@ function updateGameTurn(){
   else if(st.ended) text=endSpeech()||st.lastMsg;
   else if(game.awaitingSync){text="Placement envoyé…";cls+=" wait";}
   else if(game.localError){text=game.localError;cls+=" miss";}
-  else if(isMyTurn()&&gameDraft){text="Carte placée, cliquer sur « valider »";cls+=" mine";}
+  else if(isMyTurn()&&gameDraft){text="Carte placée, cliquer sur « valider » (Entrée)";cls+=" ready";}
   else if(isMyTurn()){text="Choisis ta carte puis clique un emplacement";cls+=" mine";}
   else if(st.draft&&st.draft.by===st.turn&&st.draft.by!==game.myId&&st.draft.date&&st.draft.date!=="park"){
     text="Dans l'attente de validation par joueur adverse";
