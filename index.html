@@ -359,7 +359,8 @@ body.game-play .drop-zone .card.game-start{z-index:3}
 #game-join-code{letter-spacing:.2em;text-transform:uppercase;width:140px;font-weight:700}
 #game-share{width:100%}
 .game-qr-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;margin:12px 0 4px}
-#game-qr{display:block;width:184px;height:184px;background:#fff;padding:8px;border-radius:12px;border:2px solid #d5deea}
+#game-qr{display:flex;align-items:center;justify-content:center;width:184px;height:184px;background:#fff;padding:8px;border-radius:12px;border:2px solid #d5deea}
+#game-qr img,#game-qr canvas{display:block;width:168px;height:168px}
 .game-qr-hint{font-size:.82rem;color:var(--muted);text-align:center;max-width:22em}
 .game-seat-pick{display:flex;flex-wrap:wrap;gap:6px}
 .game-seat-pick .btn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
@@ -417,7 +418,7 @@ body.game-play .drop-zone .card.game-start{z-index:3}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div id="resume-modal" class="resume-modal" role="dialog" aria-modal="true" aria-labelledby="resume-title">
@@ -476,7 +477,7 @@ body.game-play .drop-zone .card.game-start{z-index:3}
       <p>Donne ce code, le lien, ou le QR code aux autres :</p>
       <div class="game-code-big" id="game-code-big"></div>
       <div class="game-qr-wrap">
-        <canvas id="game-qr" width="184" height="184" aria-label="QR code pour rejoindre la partie"></canvas>
+        <div id="game-qr" role="img" aria-label="QR code pour rejoindre la partie"></div>
         <p class="game-qr-hint">Scanner ce QR ouvre la partie sur le téléphone.</p>
       </div>
       <div class="controls">
@@ -1589,15 +1590,22 @@ function randCode(){
 }
 function shareUrl(code){return location.href.split("#")[0]+"#jeu="+code;}
 function paintJoinQr(code){
-  const canvas=document.getElementById("game-qr");
-  if(!canvas||!code) return;
+  const box=document.getElementById("game-qr");
+  if(!box||!code) return;
   const url=shareUrl(code);
-  if(typeof QRCode!=="undefined"&&QRCode.toCanvas){
-    QRCode.toCanvas(canvas,url,{width:184,margin:1,color:{dark:"#1a3566",light:"#ffffff"}},()=>{});
-    return;
+  box.innerHTML="";
+  if(typeof QRCode==="function"){
+    try{
+      new QRCode(box,{text:url,width:168,height:168,colorDark:"#1a3566",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
+      if(box.querySelector("img,canvas")) return;
+    }catch(err){}
   }
-  const ctx=canvas.getContext("2d");
-  if(ctx){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle="#1a3566";ctx.font="14px Inter,sans-serif";ctx.fillText(code,16,96);}
+  const img=document.createElement("img");
+  img.alt="QR code de la partie "+code;
+  img.width=168;
+  img.height=168;
+  img.src="https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=4&data="+encodeURIComponent(url);
+  box.appendChild(img);
 }
 function codeFromQrText(raw){
   const text=String(raw||"");
@@ -2031,6 +2039,7 @@ function startHost(){
   game.peer.on("open",id=>{
     game.myId=id;
     game.lobby=[{id:id,name:"Joueur 1"}];
+    paintJoinQr(game.code);
     refreshHostWait();
   });
   game.peer.on("error",()=>{
