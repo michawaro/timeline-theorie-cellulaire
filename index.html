@@ -321,13 +321,20 @@ body.game-play #game-quit-play{display:inline-flex!important}
 body.game-play .js-validate{display:inline-flex!important}
 header .game-turn{color:#fff;background:rgba(255,248,232,.18);border-color:var(--gold)}
 body.phone.game-play header .game-turn{display:none!important}
-.card.game-start{box-shadow:0 0 0 3px #64748b}
-.card.game-p0{box-shadow:0 0 0 3px #e07a1f}
-.card.game-p1{box-shadow:0 0 0 3px #2b7de9}
-.card.game-p2{box-shadow:0 0 0 3px #1aa35a}
-.card.game-p3{box-shadow:0 0 0 3px #8b5cf6}
-.card.game-p4{box-shadow:0 0 0 3px #dc3d3d}
-.card.game-p5{box-shadow:0 0 0 3px #0d9488}
+.card.game-start{box-shadow:0 0 0 3px #fff,0 0 0 8px #64748b!important;outline:3px solid #475569;outline-offset:2px}
+.card.game-p0{box-shadow:0 0 0 3px #fff,0 0 0 9px #e07a1f,0 0 18px 3px rgba(224,122,31,.55)!important;outline:3px solid #e07a1f;outline-offset:2px}
+.card.game-p1{box-shadow:0 0 0 3px #fff,0 0 0 9px #2b7de9,0 0 18px 3px rgba(43,125,233,.55)!important;outline:3px solid #2b7de9;outline-offset:2px}
+.card.game-p2{box-shadow:0 0 0 3px #fff,0 0 0 9px #1aa35a,0 0 18px 3px rgba(26,163,90,.5)!important;outline:3px solid #1aa35a;outline-offset:2px}
+.card.game-p3{box-shadow:0 0 0 3px #fff,0 0 0 9px #8b5cf6,0 0 18px 3px rgba(139,92,246,.5)!important;outline:3px solid #8b5cf6;outline-offset:2px}
+.card.game-p4{box-shadow:0 0 0 3px #fff,0 0 0 9px #dc3d3d,0 0 18px 3px rgba(220,61,61,.5)!important;outline:3px solid #dc3d3d;outline-offset:2px}
+.card.game-p5{box-shadow:0 0 0 3px #fff,0 0 0 9px #0d9488,0 0 18px 3px rgba(13,148,136,.5)!important;outline:3px solid #0d9488;outline-offset:2px}
+body.game-play .drop-zone .card.game-p0,
+body.game-play .drop-zone .card.game-p1,
+body.game-play .drop-zone .card.game-p2,
+body.game-play .drop-zone .card.game-p3,
+body.game-play .drop-zone .card.game-p4,
+body.game-play .drop-zone .card.game-p5,
+body.game-play .drop-zone .card.game-start{z-index:3}
 .game-bar{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .game-bar h2{font-family:'Playfair Display',serif;font-size:1.15rem}
 .game-code-big{font-size:2.4rem;letter-spacing:.28em;font-weight:800}
@@ -351,6 +358,9 @@ body.phone.game-play header .game-turn{display:none!important}
 #game-join-code,#game-share{padding:10px 12px;border:1.5px solid #c5d0e0;border-radius:8px;font-size:1.05rem}
 #game-join-code{letter-spacing:.2em;text-transform:uppercase;width:140px;font-weight:700}
 #game-share{width:100%}
+.game-qr-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;margin:12px 0 4px}
+#game-qr{display:block;width:184px;height:184px;background:#fff;padding:8px;border-radius:12px;border:2px solid #d5deea}
+.game-qr-hint{font-size:.82rem;color:var(--muted);text-align:center;max-width:22em}
 .game-seat-pick{display:flex;flex-wrap:wrap;gap:6px}
 .game-seat-pick .btn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .game-opps{display:flex;flex-wrap:wrap;gap:10px;flex:1;min-width:240px}
@@ -407,6 +417,7 @@ body.phone.game-play header .game-turn{display:none!important}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 </head>
 <body>
 <div id="resume-modal" class="resume-modal" role="dialog" aria-modal="true" aria-labelledby="resume-title">
@@ -451,7 +462,7 @@ body.phone.game-play header .game-turn{display:none!important}
     <button class="btn btn-secondary" id="game-close" type="button">Quitter</button>
   </div>
   <div class="game-lobby" id="game-lobby">
-    <p>2 à 6 joueurs. Une carte est déjà au centre. À ton tour, choisis une carte (date cachée) puis touche l’emplacement. Juste : tu t’en débarrasses. Faux : elle retourne à la pioche et tu en pioches une autre. Le premier à 0 cartes gagne.</p>
+    <p>2 à 6 joueurs. Une carte est déjà au centre. À ton tour, choisis une carte (date cachée) puis touche l’emplacement. Juste : tu t’en débarrasses. Faux : un message d’erreur s’affiche et tu gardes tes cartes. Le premier à 0 cartes gagne.</p>
     <p>Nombre de joueurs (l’hôte choisit) :</p>
     <div class="game-seat-pick" id="game-seat-pick">
       <button class="btn btn-secondary on" type="button" data-n="2">2 · 5 cartes</button>
@@ -462,8 +473,12 @@ body.phone.game-play header .game-turn{display:none!important}
     </div>
     <button class="btn btn-primary" id="game-create" type="button">Créer une partie (tu es l’hôte)</button>
     <div id="game-host-block" style="display:none">
-      <p>Donne ce code aux autres, ou envoie-leur le lien :</p>
+      <p>Donne ce code, le lien, ou le QR code aux autres :</p>
       <div class="game-code-big" id="game-code-big"></div>
+      <div class="game-qr-wrap">
+        <canvas id="game-qr" width="184" height="184" aria-label="QR code pour rejoindre la partie"></canvas>
+        <p class="game-qr-hint">Scanner ce QR ouvre la partie sur le téléphone.</p>
+      </div>
       <div class="controls">
         <button class="btn btn-primary" id="game-copy" type="button">Copier le code</button>
         <button class="btn btn-secondary" id="game-copy-link" type="button">Copier le lien</button>
@@ -472,10 +487,12 @@ body.phone.game-play header .game-turn{display:none!important}
       <p id="game-wait" style="margin-top:8px"></p>
       <button class="btn btn-primary" id="game-start-now" type="button" style="display:none">Commencer maintenant</button>
     </div>
-    <p>Ou rejoins une partie avec le code affiché chez l’hôte :</p>
+    <p>Ou rejoins une partie avec le code, le lien, ou le QR code de l’hôte :</p>
     <div class="controls">
       <input id="game-join-code" maxlength="4" placeholder="CODE" autocomplete="off" aria-label="Code de la partie">
       <button class="btn btn-primary" id="game-join" type="button">Rejoindre</button>
+      <button class="btn btn-secondary" id="game-scan-qr" type="button">Scanner un QR</button>
+      <input id="game-qr-file" type="file" accept="image/*" capture="environment" hidden>
     </div>
     <p id="game-join-wait"></p>
   </div>
@@ -1571,6 +1588,40 @@ function randCode(){
   return s;
 }
 function shareUrl(code){return location.href.split("#")[0]+"#jeu="+code;}
+function paintJoinQr(code){
+  const canvas=document.getElementById("game-qr");
+  if(!canvas||!code) return;
+  const url=shareUrl(code);
+  if(typeof QRCode!=="undefined"&&QRCode.toCanvas){
+    QRCode.toCanvas(canvas,url,{width:184,margin:1,color:{dark:"#1a3566",light:"#ffffff"}},()=>{});
+    return;
+  }
+  const ctx=canvas.getContext("2d");
+  if(ctx){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle="#1a3566";ctx.font="14px Inter,sans-serif";ctx.fillText(code,16,96);}
+}
+function codeFromQrText(raw){
+  const text=String(raw||"");
+  const hash=text.match(/#jeu=([A-Za-z0-9]{4})/i);
+  if(hash) return hash[1];
+  const only=text.toUpperCase().replace(/[^A-Z0-9]/g,"");
+  return only.length===4?only:"";
+}
+async function joinFromQrFile(file){
+  if(!file) return;
+  try{
+    if(!window.BarcodeDetector){
+      alert("Scanne le QR avec l’appareil photo du téléphone, puis ouvre le lien. Tu peux aussi entrer le code.");
+      return;
+    }
+    const bmp=await createImageBitmap(file);
+    const codes=await new BarcodeDetector({formats:["qr_code"]}).detect(bmp);
+    const code=codeFromQrText(codes[0]&&codes[0].rawValue);
+    if(!code){alert("QR non reconnu. Entre le code à 4 caractères.");return;}
+    startGuest(code);
+  }catch(err){
+    alert("Impossible de lire le QR. Entre le code ou ouvre le lien.");
+  }
+}
 function cardsPerPlayer(n){return n>=6?3:n===5?4:5;}
 function openGameLobby(){document.body.classList.add("game-on");}
 function resetGameNet(){
@@ -1713,26 +1764,28 @@ function cardFits(cardId,slot){
   const right=slot>=game.state.center.length?Infinity:evDate(game.state.center[slot]);
   return d>=left&&d<=right;
 }
-function applyPlace(playerId,cardId,slot){
+function applyPlace(playerId,cardId,slot,chosenDate){
   const st=game.state;
   if(!st||st.ended||st.turn!==playerId) return;
   const pl=st.players.find(p=>p.id===playerId);
   if(!pl) return;
   const i=pl.hand.indexOf(cardId);
   if(i<0||slot<0||slot>st.center.length) return;
-  pl.hand.splice(i,1);
-  if(cardFits(cardId,slot)){
+  const exact=Number(chosenDate);
+  const ok=Number.isFinite(exact)?evDate(cardId)===exact:cardFits(cardId,slot);
+  if(ok){
+    pl.hand.splice(i,1);
     st.center.splice(slot,0,cardId);
     if(!st.centerBy) st.centerBy=st.center.map(()=>null);
     st.centerBy.splice(slot,0,playerId);
-    st.lastResult={ok:true,by:playerId};
+    st.lastResult={ok:true,by:playerId,cardId};
     st.lastMsg=pl.name+" a bien placé une carte.";
     if(!pl.hand.length) st.lastMsg=pl.name+" n’a plus de cartes. On termine le tour…";
+    if(playerId===game.myId) game.localError="";
   }else{
-    st.pile.push(cardId);
-    if(st.pile.length) pl.hand.push(st.pile.shift());
-    st.lastResult={ok:false,by:playerId};
-    st.lastMsg=pl.name+" s’est trompé : la carte retourne dans la pioche.";
+    st.lastResult={ok:false,by:playerId,cardId};
+    st.lastMsg=pl.name+" s’est trompé : la carte reste en main.";
+    if(playerId===game.myId) game.localError="Mauvais emplacement. Ta carte reste dans ta main.";
   }
   const idx=st.players.findIndex(p=>p.id===playerId);
   st.turn=st.players[(idx+1)%st.players.length].id;
@@ -1835,18 +1888,18 @@ function validateGameDraft(){
   if(!gameDraft||!isMyTurn()) return;
   const id=gameDraft.id,date=gameDraft.date;
   clearGameDraft();
-  tryPlaceGame(id,slotForDate(Number(date)));
+  tryPlaceGame(id,slotForDate(Number(date)),date);
 }
-function tryPlaceGame(cardId,slot){
+function tryPlaceGame(cardId,slot,chosenDate){
   if(!isMyTurn()||game.state.ended) return;
   if(myHand().indexOf(cardId)<0) return;
   game.localError="";
   if(game.role==="host"){
-    applyPlace(game.myId,cardId,slot);
+    applyPlace(game.myId,cardId,slot,chosenDate);
     sendState();
     renderGame();
   }else if(game.conn&&game.conn.open){
-    game.conn.send({type:"place",cardId,slot});
+    game.conn.send({type:"place",cardId,slot,date:chosenDate});
   }else{
     game.localError="Erreur de connexion. Réessaie de valider.";
     updateGameTurn();
@@ -1861,7 +1914,7 @@ function updateGameTurn(){
   else if(isMyTurn()&&gameDraft){text="Carte placée, cliquer sur « valider »";cls+=" mine";}
   else if(isMyTurn()){text="Choisis ta carte puis clique un emplacement";cls+=" mine";}
   else if(st.lastResult&&st.lastResult.ok===false&&st.lastResult.by===game.myId){
-    text="Cette carte était mal placée. Elle retourne dans la pioche.";
+    text="Mauvais emplacement. Ta carte reste dans ta main.";
     cls+=" miss";
   }else{
     const current=st.players.find(p=>p.id===st.turn);
@@ -1901,6 +1954,10 @@ function syncGameBoard(){
     }else if(mine.has(id)){
       deck.appendChild(c);
       c.draggable=Boolean(isMyTurn()&&!game.state.ended);
+      if(game.state.lastResult&&game.state.lastResult.ok===false&&game.state.lastResult.cardId===id&&game.state.lastResult.by===game.myId){
+        c.classList.add("wrong");
+        setTimeout(()=>c.classList.remove("wrong"),900);
+      }
     }else{
       deck.appendChild(c);
       c.classList.add("game-hidden");
@@ -1943,7 +2000,7 @@ function hostAddConn(conn){
   conn.on("data",msg=>{
     if(!msg||typeof msg!=="object") return;
     if(msg.type==="place"){
-      applyPlace(conn.peer,msg.cardId,msg.slot);
+      applyPlace(conn.peer,msg.cardId,msg.slot,msg.date);
       sendState();
       renderGame();
     }
@@ -1968,6 +2025,7 @@ function startHost(){
   document.getElementById("game-host-block").style.display="block";
   document.getElementById("game-code-big").textContent=game.code;
   document.getElementById("game-share").value=shareUrl(game.code);
+  paintJoinQr(game.code);
   document.getElementById("game-wait").textContent="Ouverture de la salle…";
   game.peer=new Peer(PEER_PREFIX+game.code);
   game.peer.on("open",id=>{
@@ -2029,6 +2087,12 @@ document.getElementById("game-quit-play").onclick=closeGame;
 document.getElementById("game-create").onclick=startHost;
 document.getElementById("game-start-now").onclick=beginDeal;
 document.getElementById("game-join").onclick=()=>startGuest(document.getElementById("game-join-code").value);
+document.getElementById("game-scan-qr").onclick=()=>document.getElementById("game-qr-file").click();
+document.getElementById("game-qr-file").addEventListener("change",e=>{
+  const file=e.target.files&&e.target.files[0];
+  e.target.value="";
+  joinFromQrFile(file);
+});
 document.getElementById("game-copy").onclick=()=>copyText(game.code,document.getElementById("game-copy"));
 document.getElementById("game-copy-link").onclick=()=>copyText(shareUrl(game.code),document.getElementById("game-copy-link"));
 document.getElementById("game-join-code").addEventListener("keydown",e=>{
