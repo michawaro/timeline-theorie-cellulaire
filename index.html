@@ -1616,7 +1616,7 @@ function printTimeline(){
 const PEER_PREFIX="t1a-cell-tl-";
 const CODE_CHARS="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function emptyGame(){
-  return {role:null,code:"",peer:null,conn:null,conns:[],state:null,selected:null,myId:null,seatsTarget:2,lobby:[],endLine:""};
+  return {role:null,code:"",peer:null,conn:null,conns:[],state:null,selected:null,myId:null,seatsTarget:2,lobby:[],endLine:"",awaitingSync:false};
 }
 let game=emptyGame();
 let gameDraft=null,gameDraftUndo=[],gameDraftRedo=[];
@@ -1716,17 +1716,21 @@ function myShownId(){
   return cards.length?cards[0].dataset.id:null;
 }
 function publishIntent(){
-  if(skipSave||!game.state||game.state.ended||!game.myId) return;
+  if(skipSave||!game.state||game.state.ended||!game.myId||game.awaitingSync) return;
   const shown=myShownId();
-  const draft=isMyTurn()&&gameDraft?{by:game.myId,id:gameDraft.id,date:String(gameDraft.date)}:null;
   if(!game.state.shown) game.state.shown={};
   game.state.shown[game.myId]=shown;
-  if(isMyTurn()) game.state.draft=draft;
+  const canDraft=isMyTurn()&&!game.awaitingSync;
+  if(canDraft) game.state.draft=gameDraft?{by:game.myId,id:gameDraft.id,date:String(gameDraft.date)}:null;
+  const payload={type:"intent",shown:game.role==="host"?game.state.shown:shown,playSeq:game.state.playSeq||0};
+  if(canDraft) payload.draft=game.state.draft;
   if(game.role==="host"){
-    broadcast({type:"intent",shown:game.state.shown,draft:game.state.draft||null});
+    payload.shown=game.state.shown;
+    payload.draft=game.state.draft||null;
+    broadcast(payload);
     paintRemoteIntent();
   }else if(game.conn&&game.conn.open){
-    game.conn.send({type:"intent",shown:shown,draft:isMyTurn()?draft:undefined});
+    game.conn.send(payload);
   }
 }
 function applyIntentMsg(fromId,msg){
@@ -1734,12 +1738,16 @@ function applyIntentMsg(fromId,msg){
   if(!game.state.shown) game.state.shown={};
   if(msg.shown&&typeof msg.shown==="object"&&!Array.isArray(msg.shown)){
     Object.keys(msg.shown).forEach(id=>{game.state.shown[id]=msg.shown[id];});
-  }else if(fromId&&msg.shown){
+  }else if(fromId&&typeof msg.shown==="string"){
     game.state.shown[fromId]=msg.shown;
   }
-  if(fromId&&fromId===game.state.turn&&"draft" in msg) game.state.draft=msg.draft||null;
-  else if(!fromId&&"draft" in msg) game.state.draft=msg.draft||null;
-  if(game.role==="host") broadcast({type:"intent",shown:game.state.shown,draft:game.state.draft||null});
+  const seq=game.state.playSeq||0;
+  if("draft" in msg&&(msg.playSeq==null||msg.playSeq===seq)){
+    const incoming=msg.draft||null;
+    const fromTurn=!fromId||fromId===game.state.turn;
+    if(fromTurn&&(!incoming||incoming.by===game.state.turn)) game.state.draft=incoming;
+  }
+  if(game.role==="host") broadcast({type:"intent",shown:game.state.shown,draft:game.state.draft||null,playSeq:seq});
   paintRemoteIntent();
   updateGameTurn();
 }
@@ -1798,18 +1806,20 @@ function dealState(){
     winners:[],
     roundStart:players[0].id,
     shown:{},
-    draft:null
+    draft:null,
+    playSeq:0
   };
 }
 function beginDeal(){
-  if(game.state||game.lobby.length<2) return;
+  const unique=new Set((game.lobby||[]).map(p=>p.id).filter(Boolean));
+  if(game.state||unique.size<2) return;
   game.state=dealState();
   sendState();
   renderGame();
 }
 function me(){return game.state&&game.state.players.find(p=>p.id===game.myId);}
 function myHand(){const p=me();return p&&p.hand?p.hand.slice():[];}
-function isMyTurn(){return game.state&&!game.state.ended&&game.state.turn===game.myId;}
+function isMyTurn(){return game.state&&!game.state.ended&&!game.awaitingSync&&!!me()&&game.state.turn===game.myId;}
 function pickLine(list){return list[Math.floor(Math.random()*list.length)];}
 function finishRound(st){
   const min=Math.min.apply(null,st.players.map(p=>p.hand.length));
@@ -1882,13 +1892,14 @@ function cardFits(cardId,slot){
 }
 function applyPlace(playerId,cardId,slot,chosenDate){
   const st=game.state;
-  if(!st||st.ended||st.turn!==playerId) return;
+  if(!st||st.ended||st.turn!==playerId) return false;
   const pl=st.players.find(p=>p.id===playerId);
-  if(!pl) return;
+  if(!pl) return false;
   const i=pl.hand.indexOf(cardId);
-  if(i<0||slot<0||slot>st.center.length) return;
+  if(i<0||slot<0||slot>st.center.length) return false;
   const exact=Number(chosenDate);
   const ok=Number.isFinite(exact)&&evDate(cardId)===exact;
+  let drawn=null;
   pl.hand.splice(i,1);
   if(ok){
     st.center.splice(slot,0,cardId);
@@ -1900,7 +1911,6 @@ function applyPlace(playerId,cardId,slot,chosenDate){
     if(playerId===game.myId) game.localError="";
   }else{
     if(!st.pile) st.pile=[];
-    let drawn=null;
     if(st.pile.length){
       drawn=st.pile.shift();
       pl.hand.push(drawn);
@@ -1914,12 +1924,14 @@ function applyPlace(playerId,cardId,slot,chosenDate){
     if(playerId===game.myId) game.localError=drawn===cardId?"Mauvais emplacement. La pioche est vide : tu récupères la même carte.":"Mauvais emplacement. Tu pioches une autre carte.";
   }
   st.draft=null;
+  st.playSeq=(st.playSeq||0)+1;
   if(!st.shown) st.shown={};
   if(ok) delete st.shown[playerId];
   else if(drawn) st.shown[playerId]=drawn;
   const idx=st.players.findIndex(p=>p.id===playerId);
   st.turn=st.players[(idx+1)%st.players.length].id;
   if(st.turn===st.roundStart) finishRound(st);
+  return true;
 }
 function yearLabel(d){return d<0?(-d)+" av. J.-C.":String(d);}
 function gcard(id,showDate,selectable){
@@ -1947,6 +1959,12 @@ function clearGameDraft(){
   gameDraftRedo=[];
   updateUndoButtons();
 }
+function sweepPendingCards(keepId){
+  document.querySelectorAll(".card.game-pending").forEach(c=>{
+    if(keepId&&c.dataset.id===keepId) return;
+    returnDraftCard(c.dataset.id);
+  });
+}
 function returnDraftCard(id){
   const card=document.querySelector(`.card[data-id="${id}"]`);
   if(!card) return;
@@ -1964,6 +1982,7 @@ function previewGamePlace(id,date){
     gameDraftUndo=[];
     gameDraftRedo=[];
   }
+  sweepPendingCards(id);
   const from=gameDraft&&gameDraft.id===id?gameDraft.date:"park";
   if(from===date) return;
   if(date==="park"){
@@ -2019,6 +2038,7 @@ function gameRedoDraft(){
 function validateGameDraft(){
   if(!gameDraft||!isMyTurn()) return;
   const id=gameDraft.id,date=gameDraft.date;
+  sweepPendingCards(id);
   clearGameDraft();
   tryPlaceGame(id,slotForDate(Number(date)),date);
 }
@@ -2032,11 +2052,13 @@ function tryPlaceGame(cardId,slot,chosenDate){
   }
   game.localError="";
   if(game.role==="host"){
-    applyPlace(game.myId,cardId,slot,chosenDate);
+    if(!applyPlace(game.myId,cardId,slot,chosenDate)) return;
     sendState();
     renderGame();
   }else if(game.conn&&game.conn.open){
+    game.awaitingSync=true;
     game.conn.send({type:"place",cardId,slot,date:chosenDate});
+    updateGameTurn();
   }else{
     game.localError="Erreur de connexion. Réessaie de valider.";
     updateGameTurn();
@@ -2047,10 +2069,11 @@ function updateGameTurn(){
   let text="",cls="game-turn js-game-turn";
   if(!st) text="";
   else if(st.ended) text=endSpeech()||st.lastMsg;
+  else if(game.awaitingSync){text="Placement envoyé…";cls+=" wait";}
   else if(game.localError){text=game.localError;cls+=" miss";}
   else if(isMyTurn()&&gameDraft){text="Carte placée, cliquer sur « valider »";cls+=" mine";}
   else if(isMyTurn()){text="Choisis ta carte puis clique un emplacement";cls+=" mine";}
-  else if(st.draft&&st.draft.by&&st.draft.by!==game.myId&&st.draft.date&&st.draft.date!=="park"){
+  else if(st.draft&&st.draft.by===st.turn&&st.draft.by!==game.myId&&st.draft.date&&st.draft.date!=="park"){
     text="Dans l'attente de validation par joueur adverse";
     cls+=" wait";
   }else if(st.lastResult&&st.lastResult.ok===false&&st.lastResult.by===game.myId){
@@ -2112,9 +2135,10 @@ function syncGameBoard(){
   updatePhoneDeck(selectedCardId);
   skipSave=false;
   paintRemoteIntent();
-  publishIntent();
 }
 function renderGame(){
+  game.awaitingSync=false;
+  if(game.state&&game.state.turn!==game.myId) game.localError="";
   const lobby=document.getElementById("game-lobby");
   const board=document.getElementById("game-board");
   if(!game.state){
