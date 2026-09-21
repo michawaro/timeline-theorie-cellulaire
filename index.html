@@ -1780,21 +1780,23 @@ function applyPlace(playerId,cardId,slot,chosenDate){
   const i=pl.hand.indexOf(cardId);
   if(i<0||slot<0||slot>st.center.length) return;
   const exact=Number(chosenDate);
-  const ok=Number.isFinite(exact)?evDate(cardId)===exact:cardFits(cardId,slot);
-  if(ok){
-    pl.hand.splice(i,1);
-    st.center.splice(slot,0,cardId);
-    if(!st.centerBy) st.centerBy=st.center.map(()=>null);
-    st.centerBy.splice(slot,0,playerId);
-    st.lastResult={ok:true,by:playerId,cardId};
-    st.lastMsg=pl.name+" a bien placé une carte.";
-    if(!pl.hand.length) st.lastMsg=pl.name+" n’a plus de cartes. On termine le tour…";
-    if(playerId===game.myId) game.localError="";
-  }else{
+  const ok=Number.isFinite(exact)&&evDate(cardId)===exact;
+  if(!ok){
+    st.pile=(st.pile||[]).filter(id=>id!==cardId);
+    if(pl.hand.indexOf(cardId)<0) pl.hand.splice(i,0,cardId);
     st.lastResult={ok:false,by:playerId,cardId};
     st.lastMsg=pl.name+" s’est trompé : la carte reste en main.";
     if(playerId===game.myId) game.localError="Mauvais emplacement. Ta carte reste dans ta main.";
+    return;
   }
+  pl.hand.splice(i,1);
+  st.center.splice(slot,0,cardId);
+  if(!st.centerBy) st.centerBy=st.center.map(()=>null);
+  st.centerBy.splice(slot,0,playerId);
+  st.lastResult={ok:true,by:playerId,cardId};
+  st.lastMsg=pl.name+" a bien placé une carte.";
+  if(!pl.hand.length) st.lastMsg=pl.name+" n’a plus de cartes. On termine le tour…";
+  if(playerId===game.myId) game.localError="";
   const idx=st.players.findIndex(p=>p.id===playerId);
   st.turn=st.players[(idx+1)%st.players.length].id;
   if(st.turn===st.roundStart) finishRound(st);
@@ -1901,6 +1903,11 @@ function validateGameDraft(){
 function tryPlaceGame(cardId,slot,chosenDate){
   if(!isMyTurn()||game.state.ended) return;
   if(myHand().indexOf(cardId)<0) return;
+  if(!Number.isFinite(Number(chosenDate))){
+    game.localError="Mauvais emplacement. Ta carte reste dans ta main.";
+    updateGameTurn();
+    return;
+  }
   game.localError="";
   if(game.role==="host"){
     applyPlace(game.myId,cardId,slot,chosenDate);
@@ -1972,8 +1979,9 @@ function syncGameBoard(){
       c.draggable=false;
     }
   });
-  selectedCardId=null;
-  updatePhoneDeck();
+  const failed=game.state.lastResult&&game.state.lastResult.ok===false&&mine.has(game.state.lastResult.cardId)?game.state.lastResult.cardId:null;
+  selectedCardId=failed||null;
+  updatePhoneDeck(failed);
   skipSave=false;
 }
 function renderGame(){
