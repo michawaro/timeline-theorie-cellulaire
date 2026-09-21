@@ -334,6 +334,15 @@ body.phone.game-play header .game-turn{display:none!important}
 .card.game-p3{box-shadow:0 0 0 3px #fff,0 0 0 9px #8b5cf6,0 0 18px 3px rgba(139,92,246,.5)!important;outline:3px solid #8b5cf6;outline-offset:2px}
 .card.game-p4{box-shadow:0 0 0 3px #fff,0 0 0 9px #dc3d3d,0 0 18px 3px rgba(220,61,61,.5)!important;outline:3px solid #dc3d3d;outline-offset:2px}
 .card.game-p5{box-shadow:0 0 0 3px #fff,0 0 0 9px #0d9488,0 0 18px 3px rgba(13,148,136,.5)!important;outline:3px solid #0d9488;outline-offset:2px}
+body.game-play .drop-zone:not(#phone-park){padding:0 2px;gap:0;justify-content:flex-end}
+body.game-play .drop-zone:not(#phone-park) .card,
+body.game-play .drop-zone:not(#phone-park) .card.game-ghost{
+  flex:0 0 auto;height:auto;max-height:none;margin:0
+}
+body.game-play .drop-zone:not(#phone-park) .card img,
+body.game-play .drop-zone:not(#phone-park) .card.game-ghost img{
+  flex:none;height:120px;max-height:120px;object-fit:contain
+}
 body.game-play .drop-zone .card.game-p0,
 body.game-play .drop-zone .card.game-p1,
 body.game-play .drop-zone .card.game-p2,
