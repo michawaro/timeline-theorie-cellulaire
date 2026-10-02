@@ -41,16 +41,16 @@ main{padding:12px 18px 8px;width:100%;max-width:none;flex:1;display:flex;flex-di
   display:flex;align-items:center;gap:8px}
 .bank-count{background:var(--navy);color:#fff;border-radius:20px;
   padding:1px 8px;font-size:.7rem}
-#deck{display:flex;flex-wrap:wrap;gap:8px;min-height:60px;
-  border-radius:8px;padding:8px;transition:background .2s}
+#deck{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;min-height:60px;
+  border-radius:8px;padding:8px;transition:background .2s;overflow:visible}
 #deck.drag-over{background:#e8f0fb;outline:2px dashed var(--navy2)}
 
 .card{
-  width:118px;border-radius:var(--radius);overflow:visible;cursor:grab;
+  width:118px;height:auto;align-self:flex-start;border-radius:var(--radius);overflow:visible;cursor:grab;
   transition:transform .2s ease,box-shadow .2s ease,outline .2s;user-select:none;
   -webkit-user-select:none;
   position:relative;flex-shrink:0;border:2px solid var(--navy);background:#fff;
-  transform-origin:center center
+  transform-origin:center center;display:flex;flex-direction:column
 }
 body.phone .card{touch-action:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 .card img{user-select:none}
@@ -90,9 +90,10 @@ body.phone .card img{-webkit-touch-callout:none;-webkit-user-drag:none;pointer-e
 .card-top{color:#fff;font-size:.58rem;font-weight:600;letter-spacing:.4px;
   text-transform:uppercase;padding:5px 6px;text-align:center;min-height:26px;
   display:flex;align-items:center;justify-content:center;line-height:1.25;background:var(--navy)}
-.card img{width:100%;height:120px;object-fit:contain;object-position:center;display:block;background:#f4f4f4}
-.card-body{padding:6px 7px 8px;background:#fff}
-.card-name{font-size:.68rem;font-weight:600;color:var(--text);line-height:1.3;text-align:center}
+.card img{width:100%;height:120px;flex:0 0 120px;object-fit:contain;object-position:center;display:block;background:#f4f4f4}
+.card-body{padding:6px 7px 8px;background:#fff;flex:0 0 auto}
+.card-name{font-size:.68rem;font-weight:600;color:var(--text);line-height:1.3;text-align:center;
+  white-space:normal;overflow:visible;word-break:break-word}
 
 .card.markable{outline:none}
 body.activity-on .card.markable,
@@ -194,8 +195,8 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
 }
 .tl-col,.tl-slots{overflow:visible}
 .drop-zone.drag-over{background:#e8f0fb;border-color:var(--navy2)}
-.drop-zone .card{width:min(100%,118px);flex:1 1 0;min-height:0;max-height:100%;display:flex;flex-direction:column}
-.drop-zone .card img{flex:1 1 auto;min-height:0;width:100%;height:100%;object-fit:contain;object-position:center}
+.drop-zone .card{width:min(100%,118px);flex:0 1 auto;min-height:0;max-height:100%;height:auto;display:flex;flex-direction:column}
+.drop-zone .card img{flex:0 0 110px;height:110px;width:100%;min-height:0;object-fit:contain;object-position:center}
 .drop-zone .card-top{min-height:22px;flex:0 0 auto;padding:4px 4px;font-size:.55rem}
 .drop-zone .card-body{flex:0 0 auto}
 .drop-zone .card-name{font-size:.62rem}
@@ -359,7 +360,7 @@ body.game-play:not(.phone) .drop-zone:not(#phone-park) .card.game-ghost{
 }
 body.game-play:not(.phone) .drop-zone:not(#phone-park) .card img,
 body.game-play:not(.phone) .drop-zone:not(#phone-park) .card.game-ghost img{
-  flex:none;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center bottom
+  flex:0 0 auto;width:100%;height:auto;max-height:120px;object-fit:contain;object-position:center bottom
 }
 body.game-play .drop-zone .card.game-p0,
 body.game-play .drop-zone .card.game-p1,
@@ -424,30 +425,47 @@ body.game-play .drop-zone .card.game-start{z-index:3}
 .resume-card .controls{justify-content:flex-end}
 @media print{.resume-modal,.activity-modal{display:none!important}}
 .print-sheet{display:none}
+body.printing .print-sheet{
+  display:flex!important;flex-direction:column;justify-content:space-between;gap:5mm;
+  position:fixed;left:-9999px;top:0;width:281mm;height:194mm;min-height:194mm;background:#fff
+}
+body.printing .print-title{font-family:'Playfair Display',serif;font-size:13pt;color:#1a3566;text-align:center;
+  margin:0 0 2.5mm;font-weight:700;flex:0 0 auto;letter-spacing:.2px}
+body.printing .print-copy{flex:1 1 0;border:1px dashed #9aa8bc;border-radius:8px;padding:4mm 6mm 3mm;overflow:visible;page-break-inside:avoid;display:flex;flex-direction:column;min-height:0}
+body.printing .print-copy .tl-inner{width:100%;flex:1 1 auto;min-height:0}
+body.printing .print-copy .drop-zone{min-height:18mm;border:1.5px dashed #c5cedb;background:#fafbfd;overflow:visible;justify-content:flex-end}
+body.printing .print-copy .card{display:none!important}
+body.printing .print-copy .card.print-mark-ok{
+  display:flex!important;flex-direction:column;width:min(100%,92px);max-height:none!important;height:auto;
+  animation:none!important;box-shadow:none!important;outline:none!important;
+  background:#fff!important;border:1.6px solid #1d8a4a!important;overflow:visible;
+  transform:none!important;flex:0 0 auto
+}
+body.printing .print-copy .card.print-mark-ok img{
+  display:block!important;height:14mm;flex:0 0 14mm;width:100%;max-height:14mm;
+  object-fit:contain;object-position:center;
+  print-color-adjust:exact;-webkit-print-color-adjust:exact
+}
+body.printing .print-copy.print-no-photos .card.print-mark-ok img,
+body.printing .print-copy .print-no-photos .card.print-mark-ok img{display:none!important}
+body.printing .print-copy .card.print-mark-ok .card-top{
+  min-height:0;font-size:7pt;padding:3px 4px;text-transform:none;line-height:1.25;
+  white-space:normal;overflow:visible;height:auto
+}
+body.printing .print-copy .card.print-mark-ok .card-body{padding:3px 4px 4px;overflow:visible}
+body.printing .print-copy .card.print-mark-ok .card-name{font-size:7pt;line-height:1.25;white-space:normal;overflow:visible;word-break:break-word}
+body.printing .print-copy .card-listen{display:none!important}
+body.printing .print-copy .card-mark{
+  position:absolute;top:-3mm;right:-2mm;width:7mm;height:7mm;font-size:7pt;
+  cursor:default;print-color-adjust:exact;-webkit-print-color-adjust:exact
+}
+body.printing .print-copy .tl-date{font-size:8pt;text-transform:none;white-space:normal;overflow:visible;line-height:1.2}
+body.printing .print-copy .phone-park{display:none!important}
 @media print{
   @page{size:A4 landscape;margin:8mm}
   html,body{background:#fff!important;height:auto}
   body.printing>*:not(.print-sheet){display:none!important}
-  .print-sheet{display:flex!important;flex-direction:column;justify-content:space-between;gap:6mm;height:100%;min-height:180mm}
-  .print-title{font-family:'Playfair Display',serif;font-size:16pt;color:#1a3566;text-align:center;
-    margin:0 0 3mm;font-weight:700;flex:0 0 auto;letter-spacing:.2px}
-  .print-copy{flex:1 1 0;border:1px dashed #9aa8bc;border-radius:8px;padding:5mm 7mm 4mm;overflow:hidden;page-break-inside:avoid}
-  .print-copy .tl-inner{width:100%}
-  .print-copy .drop-zone{min-height:28mm;border:1.5px dashed #c5cedb;background:#fafbfd;overflow:visible}
-  .print-copy .card{display:none!important}
-  .print-copy .card.print-mark-ok{
-    display:flex!important;flex-direction:column;width:min(100%,78px);max-height:30mm;
-    animation:none!important;box-shadow:none!important;outline:none!important;
-    background:#fff!important;border:1.6px solid #1d8a4a!important;overflow:visible
-  }
-  .print-copy .card.print-mark-ok img{max-height:16mm;height:16mm;object-fit:contain;flex:0 0 auto}
-  .print-copy .card.print-mark-ok .card-top{min-height:12px;font-size:6.5pt;padding:2px}
-  .print-copy .card.print-mark-ok .card-name{font-size:6.5pt;line-height:1.2}
-  .print-copy .card-mark{
-    position:absolute;top:-3mm;right:-2mm;width:7mm;height:7mm;font-size:9pt;
-    cursor:default;print-color-adjust:exact;-webkit-print-color-adjust:exact
-  }
-  .print-copy .tl-date{font-size:9pt}
+  body.printing .print-sheet{position:static!important;left:auto!important;top:auto!important;width:auto!important;height:100%!important;min-height:180mm}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -1611,24 +1629,64 @@ document.addEventListener("keydown",e=>{
   e.preventDefault();
   exitFullscreen();
 });
-function printTimeline(){
+function whenPrintImagesReady(root,timeoutMs=700){
+  const imgs=[...root.querySelectorAll("img")].filter(img=>!img.complete);
+  if(!imgs.length) return Promise.resolve();
+  return new Promise(resolve=>{
+    let left=imgs.length;
+    const done=()=>{if(--left<=0){clearTimeout(t);resolve();}};
+    const t=setTimeout(resolve,timeoutMs);
+    imgs.forEach(img=>{
+      img.addEventListener("load",done,{once:true});
+      img.addEventListener("error",done,{once:true});
+    });
+  });
+}
+function fitPrintPhotos(sheet){
+  sheet.querySelectorAll(".print-no-photos").forEach(el=>el.classList.remove("print-no-photos"));
+  sheet.querySelectorAll(".print-copy").forEach(copy=>{
+    copy.querySelectorAll(".drop-zone").forEach(z=>{
+      const cards=[...z.querySelectorAll(".card.print-mark-ok")];
+      if(!cards.length) return;
+      const used=cards.reduce((sum,c)=>sum+c.offsetHeight,0);
+      if(used>z.clientHeight+2) z.classList.add("print-no-photos");
+    });
+    void copy.offsetHeight;
+    const stillTight=[...copy.querySelectorAll(".drop-zone")].some(z=>{
+      const cards=[...z.querySelectorAll(".card.print-mark-ok")];
+      if(!cards.length) return false;
+      return cards.reduce((sum,c)=>sum+c.offsetHeight,0)>z.clientHeight+2;
+    });
+    if(stillTight) copy.classList.add("print-no-photos");
+  });
+}
+function cardPrintReady(card){
+  const expected=PRINCIPLES[card.dataset.id];
+  const badge=card.querySelector(".card-mark");
+  return Boolean(expected&&badge&&Number(badge.dataset.n)===expected);
+}
+async function printTimeline(){
   const sheet=document.getElementById("print-sheet")||document.body.appendChild(Object.assign(document.createElement("div"),{id:"print-sheet",className:"print-sheet"}));
   sheet.innerHTML="";
-  const title=document.createElement("h1");
-  title.className="print-title";
-  title.textContent="Théorie cellulaire et exploration des cellules";
-  sheet.appendChild(title);
   const inner=document.querySelector(".tl-inner");
   if(!inner) return;
+  const markedOk=[...document.querySelectorAll(".drop-zone:not(#phone-park) .card")].filter(cardPrintReady).length;
+  if(!markedOk){
+    msg.textContent="Identifie d’abord les principes sur les cartes : seules les cartes correctement associées s’impriment.";
+    msg.classList.add("show");
+    return;
+  }
+  const titleText="Théorie cellulaire et exploration des cellules";
   for(let i=0;i<2;i++){
     const copy=document.createElement("section");
     copy.className="print-copy";
+    const heading=document.createElement("h1");
+    heading.className="print-title";
+    heading.textContent=titleText;
+    copy.appendChild(heading);
     const clone=inner.cloneNode(true);
     clone.querySelectorAll(".card").forEach(c=>{
-      const expected=PRINCIPLES[c.dataset.id];
-      const badge=c.querySelector(".card-mark");
-      const ok=expected&&badge&&Number(badge.dataset.n)===expected;
-      if(!ok){c.remove();return;}
+      if(!cardPrintReady(c)){c.remove();return;}
       c.classList.add("print-mark-ok");
       c.classList.remove("markable","unmarkable","mark-ok","mark-bad","correct","wrong","placed","dragging");
     });
@@ -1636,6 +1694,8 @@ function printTimeline(){
     sheet.appendChild(copy);
   }
   document.body.classList.add("printing");
+  await whenPrintImagesReady(sheet);
+  fitPrintPhotos(sheet);
   const done=()=>{document.body.classList.remove("printing");sheet.innerHTML="";window.removeEventListener("afterprint",done)};
   window.addEventListener("afterprint",done);
   window.print();
