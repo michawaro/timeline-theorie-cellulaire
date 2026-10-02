@@ -1365,6 +1365,13 @@ function check(){
   syncCardLocks();
   saveState();
 }
+function returnMarkToBank(card){
+  const badge=card.querySelector(".card-mark");
+  if(!badge) return;
+  const n=badge.dataset.n;
+  badge.remove();
+  markerBank.appendChild(makeMarkChip(n));
+}
 function checkMarks(){
   let ok=0,total=Object.keys(PRINCIPLES).length;
   realCards().forEach(card=>{
@@ -1372,16 +1379,23 @@ function checkMarks(){
     const expected=PRINCIPLES[card.dataset.id];
     const badge=card.querySelector(".card-mark");
     if(!expected){
-      if(badge) card.classList.add("mark-bad");
+      if(badge){
+        card.classList.add("mark-bad");
+        returnMarkToBank(card);
+      }
       return;
     }
     if(badge && Number(badge.dataset.n)===expected){card.classList.add("mark-ok");ok++}
-    else card.classList.add("mark-bad");
+    else{
+      card.classList.add("mark-bad");
+      if(badge) returnMarkToBank(card);
+    }
   });
   const text=ok===total
     ?"Bravo : tu as associé chaque carte au principe auquel elle a le plus directement contribué."
-    :`${ok} / ${total} associations correctes. Relis les trois principes et corrige les cartes rouges.`;
+    :`${ok} / ${total} associations correctes. Les vignettes incorrectes sont revenues dans « Vignettes à placer ».`;
   showActivityMsg(text);
+  updateMarkCount();
   saveState();
   refreshActivityBoard();
 }
