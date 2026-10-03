@@ -233,6 +233,29 @@ body.activity-on .card.markable,.activity-clone.markable{cursor:copy}
   cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
 .btn-primary{background:var(--navy);color:#fff}
 .btn-primary:hover{background:var(--navy2);transform:translateY(-1px)}
+
+.btn-play{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(180deg,#ff9ad4 0%,#e63d9a 46%,#7b2cff 100%);
+  color:#fff;font-weight:800;letter-spacing:.02em;
+  padding:10px 16px 10px 12px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.5);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 2px 0 #5b16a8,0 8px 18px rgba(123,44,255,.38)
+}
+.btn-play:hover{
+  background:linear-gradient(180deg,#ffb3e0 0%,#f04aad 46%,#8b45ff 100%);
+  transform:translateY(-1px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 3px 0 #5b16a8,0 10px 22px rgba(123,44,255,.48)
+}
+.btn-play:active{
+  transform:translateY(1px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 1px 0 #5b16a8
+}
+.btn-play .play-ico{width:28px;height:28px;flex-shrink:0;display:block;image-rendering:pixelated;animation:play-bob 1.7s ease-in-out infinite}
+.btn-play:hover .play-ico{animation:none}
+@keyframes play-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+body.phone .btn-play{padding:6px 10px 6px 8px;font-size:.7rem}
+body.phone .btn-play .play-ico{width:22px;height:22px}
 .btn-secondary{background:var(--bg);color:var(--text);border:1.5px solid #d1d5db}
 .btn-audio[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
 .card-listen{
@@ -654,7 +677,7 @@ body.printing .print-copy .phone-park{display:none!important}
     <button class="btn btn-secondary" id="printTl" type="button">Imprimer mes réponses</button>
     <button class="btn btn-secondary btn-audio" id="audioDesc" type="button" aria-pressed="false" title="Activer la description audio des cartes">Description audio</button>
     <button class="btn btn-primary" id="openActivity" type="button">Théorie cellulaire, activité</button>
-    <button class="btn btn-primary" id="openGame" type="button">Mode jeu</button>
+    <button class="btn btn-play" id="openGame" type="button" title="Jouer à plusieurs"><svg class="play-ico" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="6" width="12" height="8" fill="#fff"/><rect x="0" y="8" width="2" height="4" fill="#fff"/><rect x="14" y="8" width="2" height="4" fill="#fff"/><rect x="2" y="4" width="3" height="2" fill="#fff"/><rect x="11" y="4" width="3" height="2" fill="#fff"/><rect x="3" y="9" width="6" height="2" fill="#4a1d7a"/><rect x="5" y="7" width="2" height="6" fill="#4a1d7a"/><rect x="10" y="8" width="3" height="3" fill="#ffe066"/><rect x="13" y="10" width="3" height="3" fill="#7ef0d2"/></svg>Mode jeu</button>
     <div class="hint-count" id="hintCount">Indices : 0 (frise 0 · principes 0)</div>
     <div class="score" id="score">0 / 0</div>
   </div>
